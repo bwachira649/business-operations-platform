@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="description"
+        content="OpsFlow — a modern business operations platform for customers, orders, inventory, analytics and operational workflows."
+    >
+
+    <title>OpsFlow — Business Operations Platform</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <!-- =========================================================
+             SIDEBAR
+             ========================================================= -->
+        <aside class="sidebar" id="sidebar">
+
+            <div class="brand">
+                <div class="brand-mark">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <div class="brand-copy">
+                    <strong>OpsFlow</strong>
+                    <small>Business OS</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Main navigation">
+
+                <div class="nav-section">
+                    <span class="nav-label">Workspace</span>
+
+                    <button class="nav-item active" data-view="overview">
+                        <span class="nav-icon">⌂</span>
+                        <span>Overview</span>
+                    </button>
+
+                    <button class="nav-item" data-view="customers">
+                        <span class="nav-icon">◎</span>
+                        <span>Customers</span>
+                    </button>
+
+                    <button class="nav-item" data-view="orders">
+                        <span class="nav-icon">▤</span>
+                        <span>Orders</span>
+                    </button>
+
+                    <button class="nav-item" data-view="inventory">
+                        <span class="nav-icon">◫</span>
+                        <span>Inventory</span>
+                    </button>
+
+                    <button class="nav-item" data-view="analytics">
+                        <span class="nav-icon">◒</span>
+                        <span>Analytics</span>
+                    </button>
+                </div>
+
+                <div class="nav-section">
+                    <span class="nav-label">Operations</span>
+
+                    <button class="nav-item" data-view="tasks">
+                        <span class="nav-icon">✓</span>
+                        <span>Tasks</span>
+                        <span class="nav-badge">4</span>
+                    </button>
+
+                    <button class="nav-item" data-view="reports">
+                        <span class="nav-icon">▥</span>
+                        <span>Reports</span>
+                    </button>
+
+                    <button class="nav-item" data-view="integrations">
+                        <span class="nav-icon">⌘</span>
+                        <span>Integrations</span>
+                    </button>
+                </div>
+
+                <div class="nav-section nav-section-bottom">
+                    <button class="nav-item" data-view="settings">
+                        <span class="nav-icon">⚙</span>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="workspace-status">
+                    <span class="status-dot"></span>
+                    <div>
+                        <strong>All systems operational</strong>
+                        <small>Last checked just now</small>
+                    </div>
+                </div>
+
+                <div class="profile">
+                    <div class="avatar">BW</div>
+
+                    <div class="profile-copy">
+                        <strong>Brian Wachira</strong>
+                        <small>Administrator</small>
+                    </div>
+
+                    <button class="profile-menu" aria-label="Profile menu">•••</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- =========================================================
+             MAIN CONTENT
+             ========================================================= -->
+        <main class="main-content">
+
+            <!-- TOP BAR -->
+            <header class="topbar">
+
+                <div class="mobile-brand">
+                    <div class="brand-mark">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <strong>OpsFlow</strong>
+                </div>
+
+                <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">
+                    ☰
+                </button>
+
+                <div class="breadcrumb">
+                    <span>Workspace</span>
+                    <span class="breadcrumb-separator">/</span>
+                    <strong>Overview</strong>
+                </div>
+
+                <div class="topbar-actions">
+
+                    <button class="search-trigger" id="searchTrigger">
+                        <span class="search-icon">⌕</span>
+                        <span>Search anything...</span>
+                        <kbd>Ctrl K</kbd>
+                    </button>
+
+                    <button class="icon-button notification-button" aria-label="Notifications">
+                        ♢
+                        <span class="notification-dot"></span>
+                    </button>
+
+                    <button class="icon-button" aria-label="Help">
+                        ?
+                    </button>
+                </div>
+            </header>
+
+            <!-- =====================================================
+                 LIVE STATUS MARQUEE
+                 ===================================================== -->
+            <div class="status-ticker">
+                <div class="ticker-label">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+
+                <div class="ticker-window">
+                    <div class="ticker-track">
+                        <span>Revenue tracking normally</span>
+                        <i>•</i>
+                        <span>12 orders processed in the last hour</span>
+                        <i>•</i>
+                        <span>Inventory sync completed</span>
+                        <i>•</i>
+                        <span>Payment gateway operational</span>
+                        <i>•</i>
+                        <span>4 tasks require attention</span>
+                        <i>•</i>
+                        <span>Revenue tracking normally</span>
+                        <i>•</i>
+                        <span>12 orders processed in the last hour</span>
+                        <i>•</i>
+                        <span>Inventory sync completed</span>
+                        <i>•</i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =====================================================
+                 DASHBOARD
+                 ===================================================== -->
+            <section class="dashboard" id="dashboard">
+
+                <div class="page-heading">
+                    <div>
+                        <span class="eyebrow">Thursday, October 1, 2026</span>
+                        <h1>Good afternoon, Brian.</h1>
+                        <p>Here's what's happening across your business today.</p>
+                    </div>
+
+                    <div class="heading-actions">
+                        <button class="button button-secondary" id="exportButton">
+                            <span>↓</span>
+                            Export
+                        </button>
+
+                        <button class="button button-primary" id="quickActionButton">
+                            <span>+</span>
+                            Quick action
+                        </button>
+                    </div>
+                </div>
+
+                <!-- =================================================
+                     KPI HORIZONTAL RAIL
+                     ================================================= -->
+                <section class="kpi-section">
+
+                    <div class="section-heading">
+                        <div>
+                            <span class="eyebrow">Performance</span>
+                            <h2>Business snapshot</h2>
+                        </div>
+
+                        <div class="rail-controls">
+                            <button id="kpiPrev" aria-label="Previous metrics">←</button>
+                            <button id="kpiNext" aria-label="Next metrics">→</button>
+                        </div>
+                    </div>
+
+                    <div class="kpi-rail" id="kpiRail">
+
+                        <article class="kpi-card accent-card">
+                            <div class="kpi-top">
+                                <span>Revenue</span>
+                                <span class="kpi-icon">↗</span>
+                            </div>
+
+                            <strong class="kpi-value">$84,240</strong>
+
+                            <div class="kpi-meta">
+                                <span class="positive">+12.8%</span>
+                                <span>vs last month</span>
+                            </div>
+
+                            <div class="mini-bars" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span>
+                                <span></span><span></span><span></span><span></span>
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-top">
+                                <span>Orders</span>
+                                <span class="kpi-icon">↗</span>
+                            </div>
+
+                            <strong class="kpi-value">1,284</strong>
+
+                            <div class="kpi-meta">
+                                <span class="positive">+8.4%</span>
+                                <span>vs last month</span>
+                            </div>
+
+                            <div class="mini-line">
+                                <svg viewBox="0 0 240 55" preserveAspectRatio="none">
+                                    <path
+                                        d="M0 44 C20 38, 28 42, 45 34 S72 38, 88 27 S111 31, 128 23 S150 27, 166 17 S190 25, 205 13 S226 17, 240 5"
+                                    />
+                                </svg>
+                            </div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-top">
+                                <span>Customers</span>
+                                <span class="kpi-icon">◎</span>
+                            </div>
+
+                            <strong class="kpi-value">426</strong>
+
+                            <div class="kpi-meta">
+                                <span class="positive">+5.2%</span>
+                                <span>new this month</span>
+                            </div>
+
+                            <div class="customer-stack">
+                                <div>BW</div>
+                                <div>AM</div>
+                                <div>JK</div>
+                                <div>+18</div>
+                            </div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-top">
+                                <span>Inventory health</span>
+                                <span class="kpi-icon">✓</span>
+                            </div>
+
+                            <strong class="kpi-value">87%</strong>
+
+                            <div class="kpi-meta">
+                                <span class="positive">Healthy</span>
+                                <span>32 items need review</span>
+                            </div>
+
+                            <div class="progress-track">
+                                <span style="width: 87%"></span>
+                            </div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-top">
+                                <span>Tasks completed</span>
+                                <span class="kpi-icon">✓</span>
+                            </div>
+
+                            <strong class="kpi-value">92%</strong>
+
+                            <div class="kpi-meta">
+                                <span class="positive">+4.1%</span>
+                                <span>this week</span>
+                            </div>
+
+                            <div class="progress-track">
+                                <span style="width: 92%"></span>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- =================================================
+                     MAIN GRID
+                     ================================================= -->
+                <div class="content-grid">
+
+                    <!-- REVENUE -->
+                    <section class="panel revenue-panel">
+
+                        <div class="panel-heading">
+                            <div>
+                                <span class="eyebrow">Financial performance</span>
+                                <h2>Revenue overview</h2>
+                            </div>
+
+                            <select class="period-select" id="revenuePeriod">
+                                <option>Last 7 days</option>
+                                <option selected>Last 30 days</option>
+                                <option>Last 90 days</option>
+                                <option>This year</option>
+                            </select>
+                        </div>
+
+                        <div class="chart-summary">
+                            <strong>$84,240</strong>
+                            <span class="positive">+12.8%</span>
+                        </div>
+
+                        <div class="chart">
+                            <div class="chart-y-axis">
+                                <span>$100k</span>
+                                <span>$75k</span>
+                                <span>$50k</span>
+                                <span>$25k</span>
+                                <span>$0</span>
+                            </div>
+
+                            <div class="chart-area">
+
+                                <div class="chart-grid-lines">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+
+                                <svg
+                                    class="revenue-chart"
+                                    viewBox="0 0 800 300"
+                                    preserveAspectRatio="none"
+                                    aria-label="Revenue trend chart"
+                                >
+                                    <defs>
+                                        <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
+                                            <stop offset="0%" stop-opacity=".18"/>
+                                            <stop offset="100%" stop-opacity="0"/>
+                                        </linearGradient>
+                                    </defs>
+
+                                    <path
+                                        class="chart-fill"
+                                        d="M0 255
+                                           C35 240, 55 248, 85 220
+                                           S130 230, 160 205
+                                           S205 214, 235 175
+                                           S285 195, 315 158
+                                           S365 170, 395 135
+                                           S445 150, 475 125
+                                           S525 145, 555 102
+                                           S605 128, 635 88
+                                           S685 102, 715 62
+                                           S760 78, 800 35
+                                           L800 300 L0 300 Z"
+                                    />
+
+                                    <path
+                                        class="chart-line"
+                                        d="M0 255
+                                           C35 240, 55 248, 85 220
+                                           S130 230, 160 205
+                                           S205 214, 235 175
+                                           S285 195, 315 158
+                                           S365 170, 395 135
+                                           S445 150, 475 125
+                                           S525 145, 555 102
+                                           S605 128, 635 88
+                                           S685 102, 715 62
+                                           S760 78, 800 35"
+                                    />
+
+                                    <circle cx="800" cy="35" r="6" class="chart-point"/>
+                                </svg>
+
+                                <div class="chart-x-axis">
+                                    <span>Sep 02</span>
+                                    <span>Sep 09</span>
+                                    <span>Sep 16</span>
+                                    <span>Sep 23</span>
+                                    <span>Sep 30</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ACTIVITY -->
+                    <section class="panel activity-panel">
+
+                        <div class="panel-heading">
+                            <div>
+                                <span class="eyebrow">Live feed</span>
+                                <h2>Recent activity</h2>
+                            </div>
+
+                            <button class="text-button">View all →</button>
+                        </div>
+
+                        <div class="activity-list">
+
+                            <article class="activity-item">
+                                <div class="activity-icon order">↗</div>
+                                <div class="activity-content">
+                                    <strong>New order received</strong>
+                                    <p>Order #10482 · $1,240.00</p>
+                                    <span>2 minutes ago</span>
+                                </div>
+                            </article>
+
+                            <article class="activity-item">
+                                <div class="activity-icon customer">◎</div>
+                                <div class="activity-content">
+                                    <strong>New customer added</strong>
+                                    <p>Acme Digital joined your workspace</p>
+                                    <span>18 minutes ago</span>
+                                </div>
+                            </article>
+
+                            <article class="activity-item">
+                                <div class="activity-icon inventory">◫</div>
+                                <div class="activity-content">
+                                    <strong>Inventory updated</strong>
+                                    <p>32 products synchronized</p>
+                                    <span>41 minutes ago</span>
+                                </div>
+                            </article>
+
+                            <article class="activity-item">
+                                <div class="activity-icon payment">✓</div>
+                                <div class="activity-content">
+                                    <strong>Payment completed</strong>
+                                    <p>Invoice #INV-2048 · $3,840.00</p>
+                                    <span>1 hour ago</span>
+                                </div>
+                            </article>
+
+                            <article class="activity-item">
+                                <div class="activity-icon task">✓</div>
+                                <div class="activity-content">
+                                    <strong>Task completed</strong>
+                                    <p>Monthly inventory reconciliation</p>
+                                    <span>2 hours ago</span>
+                                </div>
+                            </article>
+
+                        </div>
+                    </section>
+                </div>
+
+                <!-- =================================================
+                     LOWER GRID
+                     ================================================= -->
+                <div class="lower-grid">
+
+                    <!-- ORDERS -->
+                    <section class="panel orders-panel">
+
+                        <div class="panel-heading">
+                            <div>
+                                <span class="eyebrow">Commerce</span>
+                                <h2>Recent orders</h2>
+                            </div>
+
+                            <button class="text-button">View all →</button>
+                        </div>
+
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Order</th>
+                                        <th>Customer</th>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr>
+                                        <td><strong>#10482</strong></td>
+                                        <td>
+                                            <div class="customer-cell">
+                                                <span class="table-avatar">AD</span>
+                                                Acme Digital
+                                            </div>
+                                        </td>
+                                        <td>Oct 01, 2026</td>
+                                        <td><strong>$1,240.00</strong></td>
+                                        <td><span class="status-pill success">Paid</span></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td><strong>#10481</strong></td>
+                                        <td>
+                                            <div class="customer-cell">
+                                                <span class="table-avatar">NT</span>
+                                                Northstar Tech
+                                            </div>
+                                        </td>
+                                        <td>Oct 01, 2026</td>
+                                        <td><strong>$840.00</strong></td>
+                                        <td><span class="status-pill processing">Processing</span></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td><strong>#10480</strong></td>
+                                        <td>
+                                            <div class="customer-cell">
+                                                <span class="table-avatar">SP</span>
+                                                Studio Pixel
+                                            </div>
+                                        </td>
+                                        <td>Sep 30, 2026</td>
+                                        <td><strong>$2,180.00</strong></td>
+                                        <td><span class="status-pill success">Paid</span></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td><strong>#10479</strong></td>
+                                        <td>
+                                            <div class="customer-cell">
+                                                <span class="table-avatar">GM</span>
+                                                Green Market
+                                            </div>
+                                        </td>
+                                        <td>Sep 30, 2026</td>
+                                        <td><strong>$560.00</strong></td>
+                                        <td><span class="status-pill pending">Pending</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- BUSINESS HEALTH -->
+                    <section class="panel health-panel">
+
+                        <div class="panel-heading">
+                            <div>
+                                <span class="eyebrow">System pulse</span>
+                                <h2>Business health</h2>
+                            </div>
+
+                            <span class="health-indicator">
+                                <span></span>
+                                Healthy
+                            </span>
+                        </div>
+
+                        <div class="health-score">
+                            <div class="score-ring">
+                                <div>
+                                    <strong>94</strong>
+                                    <span>/100</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <strong>Operations are running smoothly.</strong>
+                                <p>All critical services are responding normally.</p>
+                            </div>
+                        </div>
+
+                        <div class="health-list">
+                            <div>
+                                <span><i class="health-dot"></i> Payments</span>
+                                <strong>Operational</strong>
+                            </div>
+
+                            <div>
+                                <span><i class="health-dot"></i> Inventory</span>
+                                <strong>Operational</strong>
+                            </div>
+
+                            <div>
+                                <span><i class="health-dot"></i> Notifications</span>
+                                <strong>Operational</strong>
+                            </div>
+
+                            <div>
+                                <span><i class="health-dot"></i> Database</span>
+                                <strong>Operational</strong>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <footer class="dashboard-footer">
+                    <span>OpsFlow Business OS</span>
+                    <span>Built for modern operations</span>
+                    <span>v0.1.0</span>
+                </footer>
+            </section>
+        </main>
+    </div>
+
+    <!-- =============================================================
+         COMMAND PALETTE
+         ============================================================= -->
+    <div class="overlay" id="commandOverlay" aria-hidden="true">
+        <div class="command-palette" role="dialog" aria-modal="true">
+
+            <div class="command-search">
+                <span>⌕</span>
+                <input
+                    type="text"
+                    id="commandInput"
+                    placeholder="Search pages, customers, orders..."
+                    autocomplete="off"
+                >
+                <kbd>ESC</kbd>
+            </div>
+
+            <div class="command-results" id="commandResults">
+
+                <div class="command-group">
+                    <span class="command-group-label">Quick actions</span>
+
+                    <button class="command-item" data-action="new-order">
+                        <span class="command-item-icon">+</span>
+                        <span>
+                            <strong>Create new order</strong>
+                            <small>Start a new customer order</small>
+                        </span>
+                        <kbd>O</kbd>
+                    </button>
+
+                    <button class="command-item" data-action="customer">
+                        <span class="command-item-icon">◎</span>
+                        <span>
+                            <strong>Add customer</strong>
+                            <small>Create a new customer profile</small>
+                        </span>
+                        <kbd>C</kbd>
+                    </button>
+
+                    <button class="command-item" data-action="report">
+                        <span class="command-item-icon">▥</span>
+                        <span>
+                            <strong>Generate report</strong>
+                            <small>Create a business performance report</small>
+                        </span>
+                        <kbd>R</kbd>
+                    </button>
+                </div>
+
+                <div class="command-group">
+                    <span class="command-group-label">Navigate</span>
+
+                    <button class="command-item" data-view="overview">
+                        <span class="command-item-icon">⌂</span>
+                        <span>
+                            <strong>Overview</strong>
+                            <small>Business dashboard</small>
+                        </span>
+                    </button>
+
+                    <button class="command-item" data-view="orders">
+                        <span class="command-item-icon">▤</span>
+                        <span>
+                            <strong>Orders</strong>
+                            <small>Manage orders and payments</small>
+                        </span>
+                    </button>
+
+                    <button class="command-item" data-view="inventory">
+                        <span class="command-item-icon">◫</span>
+                        <span>
+                            <strong>Inventory</strong>
+                            <small>Track products and stock</small>
+                        </span>
+                    </button>
+
+                    <button class="command-item" data-view="analytics">
+                        <span class="command-item-icon">◒</span>
+                        <span>
+                            <strong>Analytics</strong>
+                            <small>Explore business performance</small>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast" role="status">
+        <span class="toast-icon">✓</span>
+        <div>
+            <strong id="toastTitle">Done</strong>
+            <p id="toastMessage">Action completed.</p>
+        </div>
+    </div>
+
+    <script src="/static/main.js" defer></script>
+</body>
+</html>
