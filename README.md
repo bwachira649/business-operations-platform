@@ -1,4 +1,6 @@
 # OpsFlow — Business Operations Platform
+[![CI](https://github.com/bwachira649/business-operations-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/bwachira649/business-operations-platform/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bwachira649/business-operations-platform/blob/main/LICENSE)
+
 
 > **A full-stack business operations platform for managing customers, orders, inventory, analytics, tasks, and operational reporting from a unified workspace.**
 
