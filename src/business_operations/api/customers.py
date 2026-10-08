@@ -172,7 +172,7 @@ def delete_customer_endpoint(
     customer_id: int,
     db: DatabaseSession,
 ) -> Response:
-    """Delete a customer."""
+    """Delete a customer when no orders reference the customer."""
     customer = get_customer(db, customer_id)
 
     if customer is None:
@@ -181,6 +181,17 @@ def delete_customer_endpoint(
             detail="Customer not found.",
         )
 
+    if customer.orders:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Customer cannot be deleted because existing orders "
+                "reference this customer."
+            ),
+        )
+
     delete_customer(db, customer)
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )

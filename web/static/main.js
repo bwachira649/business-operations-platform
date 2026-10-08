@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
@@ -26,8 +26,43 @@ document.addEventListener("DOMContentLoaded", () => {
     let customerSearchTimer = null;
     let editingCustomerId = null;
 
-    /* ============================================================
-       CUSTOMER MODULE STYLES
+    const currentDashboardDate =
+        document.getElementById("currentDashboardDate");
+
+    if (currentDashboardDate) {
+        currentDashboardDate.textContent = new Intl.DateTimeFormat(
+            "en-US",
+            {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            },
+        ).format(new Date());
+    }
+
+    function escapeHtml(value) {
+        const element = document.createElement("div");
+        element.textContent = value ?? "";
+        return element.innerHTML;
+    }
+
+    function showToast(title, message) {
+        if (!toast || !toastTitle || !toastMessage) {
+            return;
+        }
+
+        toastTitle.textContent = title;
+        toastMessage.textContent = message;
+
+        toast.classList.add("visible");
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove("visible");
+        }, 3000);
+    }
+    /* ============================================================`r`n       CUSTOMER MODULE STYLES
        ============================================================ */
 
     function installCustomerStyles() {
@@ -37,397 +72,183 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const style = document.createElement("style");
         style.id = "customerModuleStyles";
-
         style.textContent = `
-            .customers-view {
+            #customersView {
                 display: none;
-                padding: 32px 36px 48px;
-                animation: customerViewIn .35s ease both;
             }
 
-            .customers-view.visible {
+            #customersView.visible {
                 display: block;
             }
 
-            @keyframes customerViewIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
+            #customersView .workspace-header {
+                margin-bottom: 24px;
             }
 
-            .customer-page-header {
+            #customersView .workspace-header,
+            #customersView .workspace-actions {
                 display: flex;
-                align-items: flex-end;
+                align-items: center;
                 justify-content: space-between;
-                gap: 24px;
-                margin-bottom: 28px;
+                gap: 16px;
             }
 
-            .customer-page-header h1 {
-                margin: 6px 0 8px;
-                font-family: "Space Grotesk", sans-serif;
-                font-size: clamp(30px, 4vw, 46px);
-                line-height: 1;
-                letter-spacing: -1.5px;
+            #customersView .workspace-actions {
+                justify-content: flex-end;
             }
 
-            .customer-page-header p {
+            #customersView .workspace-title h1 {
                 margin: 0;
-                color: var(--text-muted, #6b7280);
-                font-size: 15px;
             }
 
-            .customer-header-actions {
-                display: flex;
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-
-            .customer-toolbar {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin-bottom: 18px;
-                padding: 12px;
-                border: 1px solid var(--border, #e5e7eb);
-                border-radius: 18px;
-                background: var(--surface, #fff);
-                box-shadow: 0 10px 30px rgba(0, 0, 0, .04);
-            }
-
-            .customer-search {
-                flex: 1;
-                min-width: 220px;
-                position: relative;
-            }
-
-            .customer-search span {
-                position: absolute;
-                left: 15px;
-                top: 50%;
-                transform: translateY(-50%);
-                opacity: .55;
-                font-size: 18px;
-            }
-
-            .customer-search input {
-                width: 100%;
-                box-sizing: border-box;
-                border: 1px solid transparent;
-                border-radius: 12px;
-                padding: 12px 14px 12px 42px;
-                background: var(--surface-soft, #f5f6f8);
-                color: inherit;
-                outline: none;
-                font: inherit;
-                transition: .2s ease;
-            }
-
-            .customer-search input:focus {
-                border-color: currentColor;
-                background: var(--surface, #fff);
-                box-shadow: 0 0 0 4px rgba(0, 0, 0, .04);
-            }
-
-            .customer-filter {
-                border: 1px solid var(--border, #e5e7eb);
-                border-radius: 12px;
-                padding: 12px 38px 12px 14px;
-                background: var(--surface, #fff);
-                color: inherit;
-                font: inherit;
-                cursor: pointer;
-            }
-
-            .customer-summary {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 12px;
-                margin: 0 4px 12px;
-                color: var(--text-muted, #6b7280);
+            #customersView .workspace-title p {
+                margin: 7px 0 0;
+                color: var(--text-muted);
                 font-size: 13px;
             }
 
-            .customer-summary strong {
-                color: inherit;
+            #customersView .customer-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                margin-bottom: 16px;
             }
 
-            .customer-table-card {
-                overflow: hidden;
-                border: 1px solid var(--border, #e5e7eb);
-                border-radius: 20px;
-                background: var(--surface, #fff);
-                box-shadow: 0 14px 40px rgba(0, 0, 0, .045);
+            #customersView .customer-search,
+            #customersView .customer-filter {
+                height: 38px;
+                padding: 0 12px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--surface-soft);
+                color: var(--text);
+                font-size: 12px;
             }
 
-            .customer-table-scroll {
+            #customersView .customer-search {
+                flex: 1;
+                min-width: 220px;
+            }
+
+            #customersView .customer-search:focus,
+            #customersView .customer-filter:focus {
+                border-color: rgba(99, 91, 255, .45);
+                box-shadow: 0 0 0 3px rgba(99, 91, 255, .08);
+                outline: 0;
+            }
+
+            #customersView .customer-table-wrap {
                 overflow-x: auto;
             }
 
-            .customer-table {
+            #customersView .customer-table {
                 width: 100%;
-                min-width: 820px;
+                min-width: 760px;
                 border-collapse: collapse;
             }
 
-            .customer-table th {
-                padding: 15px 18px;
-                text-align: left;
-                font-size: 11px;
-                text-transform: uppercase;
+            #customersView .customer-table th {
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border);
+                background: var(--surface-soft);
+                color: var(--text-muted);
+                font-size: 9px;
+                font-weight: 800;
                 letter-spacing: .08em;
-                color: var(--text-muted, #6b7280);
-                background: var(--surface-soft, #f8f9fb);
-                border-bottom: 1px solid var(--border, #e5e7eb);
-                white-space: nowrap;
+                text-align: left;
+                text-transform: uppercase;
             }
 
-            .customer-table td {
-                padding: 17px 18px;
-                border-bottom: 1px solid var(--border, #eef0f2);
-                font-size: 14px;
-                vertical-align: middle;
+            #customersView .customer-table td {
+                padding: 15px 16px;
+                border-bottom: 1px solid var(--border);
+                color: var(--text-secondary);
+                font-size: 12px;
             }
 
-            .customer-table tbody tr {
-                transition: background .18s ease;
+            #customersView .customer-table tbody tr:hover {
+                background: var(--surface-soft);
             }
 
-            .customer-table tbody tr:hover {
-                background: var(--surface-soft, #fafafa);
+            #customersView .customer-primary {
+                color: var(--text);
+                font-weight: 750;
             }
 
-            .customer-table tbody tr:last-child td {
-                border-bottom: 0;
+            #customersView .customer-secondary {
+                margin-top: 4px;
+                color: var(--text-muted);
+                font-size: 11px;
             }
 
-            .customer-identity {
+            #customersView .customer-actions {
                 display: flex;
-                align-items: center;
-                gap: 12px;
-                min-width: 200px;
+                gap: 8px;
             }
 
-            .customer-avatar {
-                width: 40px;
-                height: 40px;
-                flex: 0 0 40px;
-                display: grid;
-                place-items: center;
-                border-radius: 12px;
-                font-size: 12px;
-                font-weight: 700;
-                background: linear-gradient(135deg, #111827, #4b5563);
-                color: #fff;
-            }
-
-            .customer-name {
-                font-weight: 700;
-            }
-
-            .customer-subtext {
-                margin-top: 3px;
-                color: var(--text-muted, #6b7280);
-                font-size: 12px;
-            }
-
-            .customer-status {
-                display: inline-flex;
-                align-items: center;
-                gap: 7px;
-                border-radius: 999px;
-                padding: 6px 10px;
-                font-size: 12px;
-                font-weight: 700;
-                text-transform: capitalize;
-            }
-
-            .customer-status::before {
-                content: "";
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-                background: currentColor;
-            }
-
-            .customer-status.active {
-                color: #15803d;
-                background: #dcfce7;
-            }
-
-            .customer-status.inactive {
-                color: #6b7280;
-                background: #f3f4f6;
-            }
-
-            .customer-status.prospect {
-                color: #a16207;
-                background: #fef3c7;
-            }
-
-            .customer-actions {
-                display: flex;
-                justify-content: flex-end;
-                gap: 6px;
-            }
-
-            .customer-action {
-                width: 34px;
-                height: 34px;
-                border: 1px solid var(--border, #e5e7eb);
-                border-radius: 10px;
+            #customersView .customer-action {
+                border: 0;
                 background: transparent;
-                color: inherit;
+                color: var(--accent);
                 cursor: pointer;
-                transition: transform .18s ease, background .18s ease;
+                font: inherit;
+                font-weight: 650;
             }
 
-            .customer-action:hover {
-                transform: translateY(-1px);
-                background: var(--surface-soft, #f5f6f8);
+            #customersView .customer-action.danger {
+                color: #c0392b;
             }
 
-            .customer-empty {
-                padding: 70px 24px;
+            #customersView .customer-empty {
+                padding: 42px 20px;
                 text-align: center;
-            }
-
-            .customer-empty-icon {
-                width: 58px;
-                height: 58px;
-                margin: 0 auto 15px;
-                display: grid;
-                place-items: center;
-                border-radius: 18px;
-                background: var(--surface-soft, #f3f4f6);
-                font-size: 25px;
-            }
-
-            .customer-empty h3 {
-                margin: 0 0 7px;
-                font-family: "Space Grotesk", sans-serif;
-            }
-
-            .customer-empty p {
-                margin: 0 0 18px;
-                color: var(--text-muted, #6b7280);
-            }
-
-            .customer-loading {
-                padding: 65px 20px;
-                text-align: center;
-                color: var(--text-muted, #6b7280);
-            }
-
-            .customer-spinner {
-                width: 30px;
-                height: 30px;
-                margin: 0 auto 14px;
-                border: 3px solid rgba(0, 0, 0, .1);
-                border-top-color: currentColor;
-                border-radius: 50%;
-                animation: customerSpin .8s linear infinite;
-            }
-
-            @keyframes customerSpin {
-                to {
-                    transform: rotate(360deg);
-                }
-            }
-
-            .customer-modal-backdrop {
-                position: fixed;
-                inset: 0;
-                z-index: 1000;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                background: rgba(10, 14, 20, .58);
-                backdrop-filter: blur(10px);
-            }
-
-            .customer-modal-backdrop.open {
-                display: flex;
-                animation: modalFade .2s ease both;
-            }
-
-            @keyframes modalFade {
-                from { opacity: 0; }
-                to { opacity: 1; }
+                color: var(--text-muted);
             }
 
             .customer-modal {
-                width: min(600px, 100%);
-                max-height: calc(100vh - 40px);
-                overflow-y: auto;
-                border: 1px solid rgba(255, 255, 255, .16);
-                border-radius: 24px;
-                background: var(--surface, #fff);
-                box-shadow: 0 30px 90px rgba(0, 0, 0, .28);
-                animation: modalUp .25s ease both;
+                position: fixed;
+                inset: 0;
+                z-index: 1000;
+                display: grid;
+                place-items: center;
+                padding: 20px;
+                background: rgba(15, 23, 42, .45);
             }
 
-            @keyframes modalUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(14px) scale(.98);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0) scale(1);
-                }
+            .customer-modal-card {
+                width: min(620px, 100%);
+                max-height: 90vh;
+                overflow-y: auto;
+                padding: 26px;
+                border-radius: 18px;
+                background: var(--surface);
+                box-shadow: 0 24px 70px rgba(15, 23, 42, .2);
             }
 
             .customer-modal-header {
                 display: flex;
                 align-items: flex-start;
                 justify-content: space-between;
-                gap: 20px;
-                padding: 25px 26px 18px;
-                border-bottom: 1px solid var(--border, #e5e7eb);
+                margin-bottom: 22px;
             }
 
-            .customer-modal-header h2 {
-                margin: 0 0 5px;
-                font-family: "Space Grotesk", sans-serif;
-            }
-
-            .customer-modal-header p {
-                margin: 0;
-                color: var(--text-muted, #6b7280);
-                font-size: 13px;
-            }
-
-            .customer-close {
-                width: 36px;
-                height: 36px;
+            .customer-modal-close {
                 border: 0;
-                border-radius: 10px;
-                background: var(--surface-soft, #f3f4f6);
+                background: transparent;
+                color: var(--text);
                 cursor: pointer;
-                font-size: 18px;
-            }
-
-            .customer-form {
-                padding: 24px 26px 26px;
+                font-size: 28px;
+                line-height: 1;
             }
 
             .customer-form-grid {
                 display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 16px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 15px;
             }
 
             .customer-field {
-                display: flex;
-                flex-direction: column;
+                display: grid;
                 gap: 7px;
             }
 
@@ -436,7 +257,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             .customer-field label {
-                font-size: 12px;
+                color: var(--text-secondary);
+                font-size: 11px;
                 font-weight: 700;
             }
 
@@ -444,15 +266,13 @@ document.addEventListener("DOMContentLoaded", () => {
             .customer-field select,
             .customer-field textarea {
                 width: 100%;
-                box-sizing: border-box;
-                border: 1px solid var(--border, #dfe3e8);
-                border-radius: 11px;
-                padding: 11px 12px;
-                background: var(--surface, #fff);
-                color: inherit;
-                font: inherit;
-                outline: none;
-                transition: .2s ease;
+                min-height: 40px;
+                padding: 9px 11px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--surface-soft);
+                color: var(--text);
+                font-size: 12px;
             }
 
             .customer-field textarea {
@@ -460,180 +280,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 resize: vertical;
             }
 
-            .customer-field input:focus,
-            .customer-field select:focus,
-            .customer-field textarea:focus {
-                border-color: currentColor;
-                box-shadow: 0 0 0 4px rgba(0, 0, 0, .045);
-            }
-
-            .customer-form-error {
-                display: none;
-                margin: 0 0 16px;
-                padding: 11px 13px;
-                border-radius: 11px;
-                color: #b91c1c;
-                background: #fee2e2;
-                font-size: 13px;
-            }
-
-            .customer-form-error.visible {
-                display: block;
-            }
-
-            .customer-form-footer {
+            .customer-modal-actions {
                 display: flex;
                 justify-content: flex-end;
                 gap: 10px;
-                margin-top: 22px;
+                margin-top: 20px;
             }
 
-            .customer-button {
-                border: 1px solid var(--border, #e5e7eb);
-                border-radius: 11px;
-                padding: 11px 16px;
-                background: var(--surface, #fff);
-                color: inherit;
-                font: inherit;
-                font-weight: 700;
-                cursor: pointer;
-                transition: transform .18s ease, opacity .18s ease;
-            }
-
-            .customer-button:hover {
-                transform: translateY(-1px);
-            }
-
-            .customer-button.primary {
-                border-color: transparent;
-                background: #111827;
-                color: #fff;
-            }
-
-            .customer-button:disabled {
-                opacity: .55;
-                cursor: wait;
-                transform: none;
-            }
-
-            .customer-detail {
-                padding: 25px 26px 28px;
-            }
-
-            .customer-detail-hero {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                margin-bottom: 24px;
-            }
-
-            .customer-detail-avatar {
-                width: 60px;
-                height: 60px;
-                display: grid;
-                place-items: center;
-                border-radius: 18px;
-                background: linear-gradient(135deg, #111827, #4b5563);
-                color: #fff;
-                font-weight: 700;
-                font-size: 17px;
-            }
-
-            .customer-detail-hero h3 {
-                margin: 0 0 5px;
-                font-family: "Space Grotesk", sans-serif;
-                font-size: 21px;
-            }
-
-            .customer-detail-hero p {
-                margin: 0;
-                color: var(--text-muted, #6b7280);
-            }
-
-            .customer-detail-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 1px;
-                overflow: hidden;
-                border: 1px solid var(--border, #e5e7eb);
-                border-radius: 15px;
-                background: var(--border, #e5e7eb);
-            }
-
-            .customer-detail-item {
-                padding: 15px;
-                background: var(--surface, #fff);
-            }
-
-            .customer-detail-item small {
-                display: block;
-                margin-bottom: 5px;
-                color: var(--text-muted, #6b7280);
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: .06em;
-            }
-
-            .customer-detail-item strong {
-                overflow-wrap: anywhere;
-            }
-
-            @media (max-width: 800px) {
-                .customers-view {
-                    padding: 24px 18px 38px;
-                }
-
-                .customer-page-header {
+            @media (max-width: 700px) {
+                #customersView .workspace-header {
                     align-items: flex-start;
                     flex-direction: column;
                 }
 
-                .customer-toolbar {
+                #customersView .customer-toolbar {
                     align-items: stretch;
                     flex-direction: column;
                 }
 
-                .customer-filter {
+                #customersView .customer-search {
                     width: 100%;
+                    min-width: 0;
                 }
-            }
 
-            @media (max-width: 560px) {
-                .customer-form-grid,
-                .customer-detail-grid {
+                .customer-form-grid {
                     grid-template-columns: 1fr;
                 }
 
                 .customer-field.full {
                     grid-column: auto;
-                }
-
-                .customer-modal-header,
-                .customer-form,
-                .customer-detail {
-                    padding-left: 18px;
-                    padding-right: 18px;
-                }
-
-                .customer-header-actions {
-                    width: 100%;
-                }
-
-                .customer-header-actions .customer-button {
-                    flex: 1;
-                }
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-                .customers-view,
-                .customer-modal,
-                .customer-modal-backdrop {
-                    animation: none;
-                }
-
-                .customer-action,
-                .customer-button {
-                    transition: none;
                 }
             }
         `;
@@ -642,8 +317,1207 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ============================================================
-       NAVIGATION
+       CUSTOMER MODULE
        ============================================================ */
+
+    function createCustomersView() {
+        if (document.getElementById("customersView")) {
+            return document.getElementById("customersView");
+        }
+
+        installCustomerStyles();
+
+        const container = document.createElement("section");
+        container.id = "customersView";
+        container.className = "workspace-view";
+
+        const dashboard = document.getElementById("dashboard");
+
+        if (dashboard) {
+            dashboard.insertAdjacentElement("afterend", container);
+        }
+
+        container.innerHTML = `
+            <div class="workspace-header">
+                <div class="workspace-title">
+                    <span class="eyebrow">Relationship management</span>
+                    <h1>Customers</h1>
+                    <p>Manage customer profiles and account relationships.</p>
+                </div>
+
+                <div class="workspace-actions">
+                    <button class="button button-primary" id="newCustomerButton">
+                        + New customer
+                    </button>
+                </div>
+            </div>
+
+            <section class="panel">
+                <div class="customer-toolbar">
+                    <input
+                        class="customer-search"
+                        id="customerSearch"
+                        type="search"
+                        placeholder="Search customers..."
+                        autocomplete="off"
+                    />
+
+                    <select class="customer-filter" id="customerStatusFilter">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="prospect">Prospect</option>
+                    </select>
+                </div>
+
+                <div class="customer-table-wrap">
+                    <table class="customer-table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Company</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        `;
+
+        document
+            .getElementById("newCustomerButton")
+            ?.addEventListener("click", () => {
+                openCustomerModal();
+            });
+
+        document
+            .getElementById("customerSearch")
+            ?.addEventListener("input", () => {
+                window.clearTimeout(customerSearchTimer);
+
+                customerSearchTimer = window.setTimeout(() => {
+                    loadCustomers();
+                }, 250);
+            });
+
+        document
+            .getElementById("customerStatusFilter")
+            ?.addEventListener("change", loadCustomers);
+
+        container.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-customer-action]");
+
+            if (!button) {
+                return;
+            }
+
+            const action = button.dataset.customerAction;
+            const id = Number(button.dataset.customerId);
+
+            if (action === "view") {
+                viewCustomer(id);
+            } else if (action === "edit") {
+                editCustomer(id);
+            } else if (action === "delete") {
+                deleteCustomer(id);
+            }
+        });
+
+        return container;
+    }
+
+    async function loadCustomers() {
+        const container = createCustomersView();
+        const tableBody = container.querySelector("#customersTableBody");
+
+        if (!tableBody) {
+            return;
+        }
+
+        const search = container.querySelector("#customerSearch")?.value.trim();
+        const status = container.querySelector("#customerStatusFilter")?.value;
+
+        const params = new URLSearchParams({
+            limit: "100",
+            offset: "0",
+        });
+
+        if (search) {
+            params.set("search", search);
+        }
+
+        if (status) {
+            params.set("status", status);
+        }
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="customer-empty">Loading customers...</td>
+            </tr>
+        `;
+
+        try {
+            const response = await fetch(`/api/v1/customers?${params}`, {
+                headers: {
+                    Accept: "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Customer request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            customers = data.items || [];
+
+            renderCustomers(customers);
+            updateCustomerKpi(data.total);
+        } catch (error) {
+            console.error("Failed to load customers:", error);
+
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="customer-empty">
+                        Unable to load customers.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function renderCustomers(items) {
+        const tableBody = document.getElementById("customersTableBody");
+
+        if (!tableBody) {
+            return;
+        }
+
+        if (!items.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="customer-empty">
+                        No customers match the current filters.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = items
+            .map((customer) => {
+                const initials = customer.name
+                    .split(/\s+/)
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase();
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="customer-primary">${escapeHtml(customer.name)}</div>
+                            <div class="customer-secondary">${escapeHtml(customer.email)}</div>
+                        </td>
+                        <td>${escapeHtml(customer.company || "")}</td>
+                        <td>${escapeHtml(customer.phone || "")}</td>
+                        <td>
+                            <span class="status-badge status-${escapeHtml(customer.status)}">
+                                ${escapeHtml(customer.status)}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="customer-actions">
+                                <button
+                                    class="customer-action"
+                                    data-customer-action="view"
+                                    data-customer-id="${customer.id}"
+                                >View</button>
+
+                                <button
+                                    class="customer-action"
+                                    data-customer-action="edit"
+                                    data-customer-id="${customer.id}"
+                                >Edit</button>
+
+                                <button
+                                    class="customer-action danger"
+                                    data-customer-action="delete"
+                                    data-customer-id="${customer.id}"
+                                >Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+    }
+
+    function openCustomerModal(customer = null) {
+        closeCustomerModal();
+
+        editingCustomerId = customer?.id ?? null;
+
+        const modal = document.createElement("div");
+        modal.className = "customer-modal";
+        modal.id = "customerModal";
+
+        modal.innerHTML = `
+            <div class="customer-modal-card" role="dialog" aria-modal="true">
+                <div class="customer-modal-header">
+                    <div>
+                        <span class="eyebrow">${customer ? "Customer profile" : "New customer"}</span>
+                        <h2>${customer ? "Edit customer" : "Create customer"}</h2>
+                    </div>
+
+                    <button class="customer-modal-close" type="button" aria-label="Close">
+                        
+                    </button>
+                </div>
+
+                <form id="customerForm">
+                    <div class="customer-form-grid">
+                        <div class="customer-field">
+                            <label for="customerName">Name</label>
+                            <input id="customerName" name="name" required maxlength="150"
+                                value="${escapeHtml(customer?.name || "")}">
+                        </div>
+
+                        <div class="customer-field">
+                            <label for="customerEmail">Email</label>
+                            <input id="customerEmail" name="email" type="email" required
+                                maxlength="254" value="${escapeHtml(customer?.email || "")}">
+                        </div>
+
+                        <div class="customer-field">
+                            <label for="customerPhone">Phone</label>
+                            <input id="customerPhone" name="phone" maxlength="50"
+                                value="${escapeHtml(customer?.phone || "")}">
+                        </div>
+
+                        <div class="customer-field">
+                            <label for="customerCompany">Company</label>
+                            <input id="customerCompany" name="company" maxlength="150"
+                                value="${escapeHtml(customer?.company || "")}">
+                        </div>
+
+                        <div class="customer-field">
+                            <label for="customerStatus">Status</label>
+                            <select id="customerStatus" name="status">
+                                <option value="active" ${customer?.status === "active" ? "selected" : ""}>Active</option>
+                                <option value="inactive" ${customer?.status === "inactive" ? "selected" : ""}>Inactive</option>
+                                <option value="prospect" ${customer?.status === "prospect" ? "selected" : ""}>Prospect</option>
+                            </select>
+                        </div>
+
+                        <div class="customer-field full">
+                            <label for="customerNotes">Notes</label>
+                            <textarea id="customerNotes" name="notes">${escapeHtml(customer?.notes || "")}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="customer-modal-actions">
+                        <button class="button button-secondary" type="button" id="customerCancel">
+                            Cancel
+                        </button>
+                        <button class="button button-primary" type="submit">
+                            ${customer ? "Save changes" : "Create customer"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal
+            .querySelector(".customer-modal-close")
+            ?.addEventListener("click", closeCustomerModal);
+
+        modal
+            .querySelector("#customerCancel")
+            ?.addEventListener("click", closeCustomerModal);
+
+        modal
+            .querySelector("#customerForm")
+            ?.addEventListener("submit", saveCustomer);
+
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeCustomerModal();
+            }
+        });
+
+        modal.querySelector("#customerName")?.focus();
+    }
+
+    function closeCustomerModal() {
+        document.getElementById("customerModal")?.remove();
+        editingCustomerId = null;
+    }
+
+    async function saveCustomer(event) {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+
+        const payload = {
+            name: formData.get("name"),
+            email: formData.get("email"),
+            phone: formData.get("phone") || null,
+            company: formData.get("company") || null,
+            status: formData.get("status"),
+            notes: formData.get("notes") || null,
+        };
+
+        const wasEditing = Boolean(editingCustomerId);
+        const url = wasEditing
+            ? `/api/v1/customers/${editingCustomerId}`
+            : "/api/v1/customers";
+
+        try {
+            const response = await fetch(url, {
+                method: wasEditing ? "PATCH" : "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || `Customer request failed: ${response.status}`,
+                );
+            }
+
+            closeCustomerModal();
+            await loadCustomers();
+
+            showToast(
+                "Customers",
+                wasEditing ? "Customer updated." : "Customer created.",
+            );
+        } catch (error) {
+            console.error("Failed to save customer:", error);
+            showToast("Customer error", error.message);
+        }
+    }
+
+    function viewCustomer(id) {
+        const customer = customers.find((item) => item.id === id);
+
+        if (!customer) {
+            return;
+        }
+
+        openCustomerModal(customer);
+    }
+
+    function editCustomer(id) {
+        const customer = customers.find((item) => item.id === id);
+
+        if (!customer) {
+            return;
+        }
+
+        openCustomerModal(customer);
+    }
+
+    async function deleteCustomer(id) {
+        const customer = customers.find((item) => item.id === id);
+
+        if (!customer) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Delete customer "${customer.name}"? This cannot be undone.`,
+            )
+        ) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/v1/customers/${id}`, {
+                method: "DELETE",
+            });
+
+            const data =
+                response.status === 204 ? null : await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.detail ||
+                        `Customer deletion failed: ${response.status}`,
+                );
+            }
+
+            await loadCustomers();
+
+            showToast("Customers", "Customer deleted.");
+        } catch (error) {
+            console.error("Failed to delete customer:", error);
+            showToast("Customer error", error.message);
+        }
+    }
+
+    function updateCustomerKpi(total) {
+        const cards = document.querySelectorAll(".kpi-card");
+
+        cards.forEach((card) => {
+            const text = card.textContent;
+
+            if (!text.includes("Customers")) {
+                return;
+            }
+
+            const value = card.querySelector(".kpi-value");
+
+            if (value) {
+                value.textContent = Number(total).toLocaleString();
+            }
+        });
+    }
+
+    /* ============================================================
+       INTEGRATIONS & SETTINGS WORKSPACES
+       ============================================================ */
+
+    function installUtilityViewStyles() {
+        if (document.getElementById("utilityViewStyles")) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = "utilityViewStyles";
+        style.textContent = `
+            .utility-view {
+                display: none;
+            }
+
+            .utility-view.visible {
+                display: block;
+            }
+
+            .utility-hero {
+                margin-bottom: 24px;
+            }
+
+            .utility-hero h1 {
+                margin: 0;
+            }
+
+            .utility-hero p {
+                margin: 7px 0 0;
+                color: var(--text-muted);
+                font-size: 13px;
+                max-width: 720px;
+            }
+
+            .utility-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 16px;
+            }
+
+            .utility-card {
+                padding: 22px;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                background: var(--surface);
+                box-shadow: var(--shadow-sm);
+            }
+
+            .utility-card-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 16px;
+            }
+
+            .utility-card-title {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .utility-card-icon {
+                width: 38px;
+                height: 38px;
+                display: grid;
+                place-items: center;
+                border-radius: 10px;
+                background: var(--accent-soft);
+                color: var(--accent);
+                font-weight: 700;
+            }
+
+            .utility-card h2 {
+                margin: 0;
+                font-size: 15px;
+            }
+
+            .utility-card p {
+                margin: 5px 0 0;
+                color: var(--text-secondary);
+                font-size: 12px;
+                line-height: 1.55;
+            }
+
+            .utility-status {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 9px;
+                border-radius: 999px;
+                background: var(--surface-soft);
+                color: var(--text-secondary);
+                font-size: 11px;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+
+            .utility-status::before {
+                content: "";
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--text-muted);
+            }
+
+            .utility-detail {
+                margin-top: 18px;
+                padding-top: 16px;
+                border-top: 1px solid var(--border);
+            }
+
+            .utility-label {
+                display: block;
+                margin-bottom: 7px;
+                color: var(--text-secondary);
+                font-size: 11px;
+                font-weight: 600;
+            }
+
+            .utility-code {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .utility-code code {
+                flex: 1;
+                min-width: 0;
+                padding: 10px 12px;
+                overflow: hidden;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--surface-soft);
+                color: var(--text);
+                font-size: 11px;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .utility-note {
+                padding: 14px 16px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                background: var(--surface-soft);
+                color: var(--text-secondary);
+                font-size: 12px;
+                line-height: 1.55;
+            }
+
+            .settings-layout {
+                display: grid;
+                grid-template-columns: 190px minmax(0, 1fr);
+                gap: 20px;
+            }
+
+            .settings-nav {
+                align-self: start;
+                display: grid;
+                gap: 4px;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                background: var(--surface);
+            }
+
+            .settings-nav button {
+                padding: 10px 12px;
+                border: 0;
+                border-radius: 8px;
+                background: transparent;
+                color: var(--text-secondary);
+                cursor: pointer;
+                text-align: left;
+                font: inherit;
+                font-size: 12px;
+            }
+
+            .settings-nav button.active {
+                background: var(--accent-soft);
+                color: var(--accent);
+                font-weight: 600;
+            }
+
+            .settings-section {
+                display: none;
+            }
+
+            .settings-section.active {
+                display: block;
+            }
+
+            .settings-section + .settings-section {
+                margin-top: 16px;
+            }
+
+            .settings-heading {
+                margin-bottom: 18px;
+            }
+
+            .settings-heading h2 {
+                margin: 0;
+                font-size: 17px;
+            }
+
+            .settings-heading p {
+                margin: 6px 0 0;
+                color: var(--text-muted);
+                font-size: 12px;
+            }
+
+            .settings-field {
+                margin-bottom: 16px;
+            }
+
+            .settings-field:last-child {
+                margin-bottom: 0;
+            }
+
+            .settings-field label {
+                display: block;
+                margin-bottom: 7px;
+                color: var(--text-secondary);
+                font-size: 11px;
+                font-weight: 600;
+            }
+
+            .settings-field input,
+            .settings-field select {
+                width: 100%;
+                height: 40px;
+                padding: 0 12px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--surface);
+                color: var(--text);
+                font: inherit;
+                font-size: 12px;
+                outline: 0;
+            }
+
+            .settings-field input:focus,
+            .settings-field select:focus {
+                border-color: rgba(99, 91, 255, .45);
+                box-shadow: 0 0 0 3px rgba(99, 91, 255, .08);
+            }
+
+            .settings-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+                padding: 15px 0;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .settings-row:first-child {
+                padding-top: 0;
+            }
+
+            .settings-row:last-child {
+                padding-bottom: 0;
+                border-bottom: 0;
+            }
+
+            .settings-row strong {
+                display: block;
+                margin-bottom: 4px;
+                color: var(--text);
+                font-size: 12px;
+            }
+
+            .settings-row span {
+                color: var(--text-muted);
+                font-size: 11px;
+                line-height: 1.45;
+            }
+
+            .settings-toggle {
+                position: relative;
+                width: 42px;
+                height: 24px;
+                flex: 0 0 auto;
+                border: 0;
+                border-radius: 999px;
+                background: var(--border-strong);
+                cursor: pointer;
+            }
+
+            .settings-toggle::after {
+                content: "";
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: var(--surface);
+                box-shadow: var(--shadow-sm);
+                transition: transform .18s ease;
+            }
+
+            .settings-toggle.active {
+                background: var(--accent);
+            }
+
+            .settings-toggle.active::after {
+                transform: translateX(18px);
+            }
+
+            .settings-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                margin-top: 20px;
+            }
+
+            @media (max-width: 850px) {
+                .utility-grid,
+                .settings-layout {
+                    grid-template-columns: 1fr;
+                }
+
+                .settings-nav {
+                    display: flex;
+                    overflow-x: auto;
+                }
+
+                .settings-nav button {
+                    white-space: nowrap;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    function createUtilityViews() {
+        if (
+            document.getElementById("integrationsView") &&
+            document.getElementById("settingsView")
+        ) {
+            return;
+        }
+
+        installUtilityViewStyles();
+
+        const dashboard = document.getElementById("dashboard");
+
+        if (!dashboard) {
+            return;
+        }
+
+        if (!document.getElementById("integrationsView")) {
+            const integrations = document.createElement("section");
+            integrations.id = "integrationsView";
+            integrations.className = "utility-view workspace-view";
+            integrations.innerHTML = `
+                <div class="utility-hero">
+                    <span class="eyebrow">Connected services</span>
+                    <h1>Integrations</h1>
+                    <p>
+                        Manage the services and automation endpoints that can
+                        extend OpsFlow. Connections are configured explicitly;
+                        nothing is presented as connected until it actually is.
+                    </p>
+                </div>
+
+                <div class="utility-grid">
+                    <article class="utility-card">
+                        <div class="utility-card-header">
+                            <div class="utility-card-title">
+                                <div class="utility-card-icon">API</div>
+                                <div>
+                                    <h2>OpsFlow API</h2>
+                                    <p>Programmatic access to workspace data.</p>
+                                </div>
+                            </div>
+                            <span class="utility-status">Available</span>
+                        </div>
+                        <div class="utility-detail">
+                            <span class="utility-label">Base endpoint</span>
+                            <div class="utility-code">
+                                <code id="integrationApiEndpoint"></code>
+                                <button class="button button-secondary"
+                                    type="button" data-copy-api>
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="utility-card">
+                        <div class="utility-card-header">
+                            <div class="utility-card-title">
+                                <div class="utility-card-icon"></div>
+                                <div>
+                                    <h2>Webhooks</h2>
+                                    <p>Send workspace events to external systems.</p>
+                                </div>
+                            </div>
+                            <span class="utility-status">Not connected</span>
+                        </div>
+                        <div class="utility-detail">
+                            <div class="utility-note">
+                                No webhook destination is configured. Add a
+                                destination when an external automation workflow
+                                is ready to consume OpsFlow events.
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="utility-card">
+                        <div class="utility-card-header">
+                            <div class="utility-card-title">
+                                <div class="utility-card-icon"></div>
+                                <div>
+                                    <h2>Email</h2>
+                                    <p>Operational notifications and reports.</p>
+                                </div>
+                            </div>
+                            <span class="utility-status">Not connected</span>
+                        </div>
+                        <div class="utility-detail">
+                            <div class="utility-note">
+                                Email delivery is not configured in this
+                                environment. No messages will be sent externally.
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="utility-card">
+                        <div class="utility-card-header">
+                            <div class="utility-card-title">
+                                <div class="utility-card-icon"></div>
+                                <div>
+                                    <h2>Messaging</h2>
+                                    <p>Prepare alerts for supported messaging channels.</p>
+                                </div>
+                            </div>
+                            <span class="utility-status">Not connected</span>
+                        </div>
+                        <div class="utility-detail">
+                            <div class="utility-note">
+                                No messaging provider is connected. This workspace
+                                does not claim an active WhatsApp, SMS, or social
+                                messaging connection.
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            `;
+
+            dashboard.insertAdjacentElement("afterend", integrations);
+        }
+
+        if (!document.getElementById("settingsView")) {
+            const settings = document.createElement("section");
+            settings.id = "settingsView";
+            settings.className = "utility-view workspace-view";
+            settings.innerHTML = `
+                <div class="utility-hero">
+                    <span class="eyebrow">Workspace configuration</span>
+                    <h1>Settings</h1>
+                    <p>
+                        Configure local OpsFlow preferences and workspace details.
+                        Changes here affect this browser environment only.
+                    </p>
+                </div>
+
+                <div class="settings-layout">
+                    <nav class="settings-nav" aria-label="Settings sections">
+                        <button type="button" class="active" data-settings-tab="workspace">
+                            Workspace
+                        </button>
+                        <button type="button" data-settings-tab="profile">
+                            Profile
+                        </button>
+                        <button type="button" data-settings-tab="notifications">
+                            Notifications
+                        </button>
+                        <button type="button" data-settings-tab="preferences">
+                            Preferences
+                        </button>
+                    </nav>
+
+                    <div>
+                        <section class="panel settings-section active" data-settings-section="workspace">
+                            <div class="settings-heading">
+                                <h2>Workspace</h2>
+                                <p>Basic information displayed across the application.</p>
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="workspaceName">Workspace name</label>
+                                <input id="workspaceName" value="OpsFlow  Business OS" />
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="workspaceTimezone">Timezone</label>
+                                <select id="workspaceTimezone">
+                                    <option>Africa/Nairobi</option>
+                                    <option>UTC</option>
+                                    <option>Europe/London</option>
+                                    <option>America/New_York</option>
+                                </select>
+                            </div>
+
+                            <div class="settings-actions">
+                                <button class="button button-primary" type="button" data-save-workspace>
+                                    Save changes
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="panel settings-section" data-settings-section="profile">
+                            <div class="settings-heading">
+                                <h2>Profile</h2>
+                                <p>Administrator profile used by this workspace.</p>
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="profileName">Name</label>
+                                <input id="profileName" value="Brian Wachira" />
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="profileRole">Role</label>
+                                <input id="profileRole" value="Administrator" />
+                            </div>
+
+                            <div class="settings-note utility-note">
+                                Authentication and account management are not
+                                configured as an external identity service in this
+                                local portfolio environment.
+                            </div>
+
+                            <div class="settings-actions">
+                                <button class="button button-primary" type="button" data-save-profile>
+                                    Save profile
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="panel settings-section" data-settings-section="notifications">
+                            <div class="settings-heading">
+                                <h2>Notifications</h2>
+                                <p>Control local workspace notification preferences.</p>
+                            </div>
+
+                            <div class="settings-row">
+                                <div>
+                                    <strong>Task reminders</strong>
+                                    <span>Show reminders for outstanding operational tasks.</span>
+                                </div>
+                                <button class="settings-toggle active" type="button"
+                                    data-setting-toggle="taskReminders"
+                                    aria-label="Toggle task reminders"></button>
+                            </div>
+
+                            <div class="settings-row">
+                                <div>
+                                    <strong>Report updates</strong>
+                                    <span>Show local notifications when reports are refreshed.</span>
+                                </div>
+                                <button class="settings-toggle active" type="button"
+                                    data-setting-toggle="reportUpdates"
+                                    aria-label="Toggle report updates"></button>
+                            </div>
+                        </section>
+
+                        <section class="panel settings-section" data-settings-section="preferences">
+                            <div class="settings-heading">
+                                <h2>Preferences</h2>
+                                <p>Adjust how OpsFlow behaves in this browser.</p>
+                            </div>
+
+                            <div class="settings-row">
+                                <div>
+                                    <strong>Live workspace updates</strong>
+                                    <span>Allow dashboard modules to refresh data when opened.</span>
+                                </div>
+                                <button class="settings-toggle active" type="button"
+                                    data-setting-toggle="liveUpdates"
+                                    aria-label="Toggle live workspace updates"></button>
+                            </div>
+
+                            <div class="settings-row">
+                                <div>
+                                    <strong>Compact navigation</strong>
+                                    <span>Keep the standard navigation layout for this workspace.</span>
+                                </div>
+                                <button class="settings-toggle" type="button"
+                                    data-setting-toggle="compactNavigation"
+                                    aria-label="Toggle compact navigation"></button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            `;
+
+            const integrationsView = document.getElementById("integrationsView");
+            integrationsView.insertAdjacentElement("afterend", settings);
+        }
+
+        const apiEndpoint = document.getElementById("integrationApiEndpoint");
+
+        if (apiEndpoint) {
+            apiEndpoint.textContent =
+                `${window.location.origin}/api/v1`;
+        }
+
+        document.querySelectorAll("[data-copy-api]").forEach((button) => {
+            button.addEventListener("click", async () => {
+                const value = apiEndpoint?.textContent || "";
+
+                try {
+                    await navigator.clipboard.writeText(value);
+                    showToast("Copied", "API endpoint copied to clipboard.");
+                } catch (error) {
+                    console.error("Failed to copy API endpoint:", error);
+                    showToast("Copy unavailable", value);
+                }
+            });
+        });
+
+        document.querySelectorAll("[data-settings-tab]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const tab = button.dataset.settingsTab;
+
+                document.querySelectorAll("[data-settings-tab]").forEach((item) => {
+                    item.classList.toggle("active", item === button);
+                });
+
+                document.querySelectorAll("[data-settings-section]").forEach((section) => {
+                    section.classList.toggle(
+                        "active",
+                        section.dataset.settingsSection === tab,
+                    );
+                });
+            });
+        });
+
+        document.querySelectorAll("[data-setting-toggle]").forEach((button) => {
+            const key = `opsflow.setting.${button.dataset.settingToggle}`;
+            const saved = localStorage.getItem(key);
+
+            if (saved !== null) {
+                button.classList.toggle("active", saved === "true");
+            }
+
+            button.addEventListener("click", () => {
+                const active = !button.classList.contains("active");
+
+                button.classList.toggle("active", active);
+                localStorage.setItem(key, String(active));
+            });
+        });
+
+        document
+            .querySelector("[data-save-workspace]")
+            ?.addEventListener("click", () => {
+                const name = document.getElementById("workspaceName")?.value.trim();
+
+                if (name) {
+                    localStorage.setItem("opsflow.workspace.name", name);
+                    showToast("Workspace saved", "Workspace preferences updated locally.");
+                }
+            });
+
+        document
+            .querySelector("[data-save-profile]")
+            ?.addEventListener("click", () => {
+                const name = document.getElementById("profileName")?.value.trim();
+
+                if (name) {
+                    localStorage.setItem("opsflow.profile.name", name);
+                    showToast("Profile saved", "Profile preferences updated locally.");
+                }
+            });
+
+        const savedWorkspaceName = localStorage.getItem("opsflow.workspace.name");
+        const savedProfileName = localStorage.getItem("opsflow.profile.name");
+
+        if (savedWorkspaceName) {
+            const field = document.getElementById("workspaceName");
+            if (field) {
+                field.value = savedWorkspaceName;
+            }
+        }
+
+        if (savedProfileName) {
+            const field = document.getElementById("profileName");
+            if (field) {
+                field.value = savedProfileName;
+            }
+        }
+    }
+    /* ============================================================
+       VIEW MANAGEMENT
+       ============================================================ */
+
+    async function verifyBackend() {
+        try {
+            const response = await fetch("/health", {
+                headers: {
+                    Accept: "application/json",
+                },
+            });
+
+            const data = await response.json();
+
+            const statusText = document.querySelector(
+                ".system-status span:last-child",
+            );
+
+            if (statusText && data.status === "healthy") {
+                statusText.textContent = "All systems operational";
+            }
+        } catch (error) {
+            console.error("Backend health check failed:", error);
+
+            const statusText = document.querySelector(
+                ".system-status span:last-child",
+            );
+
+            if (statusText) {
+                statusText.textContent = "API connection unavailable";
+            }
+        }
+    }
 
     function setActiveView(view) {
         document.querySelectorAll(".nav-item").forEach((item) => {
@@ -668,30 +1542,68 @@ document.addEventListener("DOMContentLoaded", () => {
             currentPage.textContent = labels[view] || "Overview";
         }
 
-        const dashboard = document.getElementById("dashboard");
-        const customersView = document.getElementById("customersView");
+        createCustomersView();
+        createUtilityViews();
 
-        if (dashboard) {
-            dashboard.style.display = view === "overview" ? "" : "none";
-        }
+        const views = {
+            overview: document.getElementById("dashboard"),
+            customers: document.getElementById("customersView"),
+            orders: document.getElementById("ordersView"),
+            inventory: document.getElementById("inventoryView"),
+            analytics: document.getElementById("analyticsView"),
+            tasks: document.getElementById("tasksView"),
+            reports: document.getElementById("reportsView"),
+            integrations: document.getElementById("integrationsView"),
+            settings: document.getElementById("settingsView"),
+        };
 
-        if (customersView) {
-            customersView.classList.toggle("visible", view === "customers");
-        }
+        Object.entries(views).forEach(([name, element]) => {
+            if (!element) {
+                return;
+            }
 
-        if (window.innerWidth <= 760) {
-            sidebar.classList.remove("open");
-        }
+            if (name === "overview") {
+                element.style.display = view === "overview" ? "" : "none";
+            } else {
+                element.classList.toggle("visible", view === name);
+                element.style.display = view === name ? "" : "none";
+            }
+        });
 
         if (view === "customers") {
             loadCustomers();
-        } else if (view !== "overview") {
-            showToast(
-                `${capitalize(view)} workspace`,
-                `${capitalize(view)} module is ready for the next implementation phase.`
-            );
+        } else if (view === "inventory") {
+            if (typeof window.loadInventory === "function") {
+                window.loadInventory();
+            }
+        } else if (view === "orders") {
+            if (typeof window.loadOrders === "function") {
+                window.loadOrders();
+            }
+        } else if (view === "analytics") {
+            if (typeof window.loadAnalytics === "function") {
+                window.loadAnalytics();
+            }
+        } else if (view === "tasks") {
+            if (typeof window.loadTasks === "function") {
+                window.loadTasks();
+            }
+        } else if (view === "reports") {
+            if (typeof window.loadReports === "function") {
+                window.loadReports();
+            }
+        }
+
+        if (window.innerWidth <= 760) {
+            sidebar?.classList.remove("open");
         }
     }
+    window.setActiveView = setActiveView;
+    window.openCustomerModal = openCustomerModal;
+
+    /* ============================================================
+       NAVIGATION
+       ============================================================ */
 
     document.querySelectorAll("[data-view]").forEach((item) => {
         item.addEventListener("click", () => {
@@ -699,58 +1611,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    function capitalize(value) {
-        return value.charAt(0).toUpperCase() + value.slice(1);
-    }
-
-    /* ============================================================
-       MOBILE SIDEBAR
-       ============================================================ */
-
     mobileMenu?.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
-    });
-
-    document.addEventListener("click", (event) => {
-        if (window.innerWidth > 760) {
-            return;
-        }
-
-        if (
-            sidebar.classList.contains("open") &&
-            !sidebar.contains(event.target) &&
-            !mobileMenu.contains(event.target)
-        ) {
-            sidebar.classList.remove("open");
-        }
-    });
-
-    /* ============================================================
-       KPI HORIZONTAL SCROLL
-       ============================================================ */
-
-    const getKpiScrollAmount = () => {
-        const card = kpiRail?.querySelector(".kpi-card");
-
-        if (!card) {
-            return 260;
-        }
-
-        return card.getBoundingClientRect().width + 12;
-    };
-
-    kpiPrev?.addEventListener("click", () => {
-        kpiRail.scrollBy({
-            left: -getKpiScrollAmount(),
-            behavior: "smooth",
-        });
-    });
-
-    kpiNext?.addEventListener("click", () => {
-        kpiRail.scrollBy({
-            left: getKpiScrollAmount(),
-            behavior: "smooth",
-        });
+        sidebar?.classList.toggle("open");
     });
 
     /* ============================================================
@@ -758,18 +1620,22 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function openCommandPalette() {
-        commandOverlay.classList.add("open");
-        commandOverlay.setAttribute("aria-hidden", "false");
+        commandOverlay?.classList.add("open");
+        commandOverlay?.setAttribute("aria-hidden", "false");
 
         window.setTimeout(() => {
-            commandInput.focus();
+            commandInput?.focus();
         }, 80);
     }
 
     function closeCommandPalette() {
-        commandOverlay.classList.remove("open");
-        commandOverlay.setAttribute("aria-hidden", "true");
-        commandInput.value = "";
+        commandOverlay?.classList.remove("open");
+        commandOverlay?.setAttribute("aria-hidden", "true");
+
+        if (commandInput) {
+            commandInput.value = "";
+        }
+
         filterCommands("");
     }
 
@@ -782,14 +1648,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.addEventListener("keydown", (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            event.key.toLowerCase() === "k"
+        ) {
             event.preventDefault();
             openCommandPalette();
         }
 
         if (
             event.key === "Escape" &&
-            commandOverlay.classList.contains("open")
+            commandOverlay?.classList.contains("open")
         ) {
             closeCommandPalette();
         }
@@ -800,6 +1669,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function filterCommands(query) {
+        if (!commandResults) {
+            return;
+        }
+
         const items = commandResults.querySelectorAll(".command-item");
 
         items.forEach((item) => {
@@ -824,20 +1697,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const action = item.dataset.action;
 
         if (action === "new-order") {
-            showToast(
-                "New order",
-                "Order creation workflow will open when the orders module is connected."
-            );
+            setActiveView("orders");
+
+            window.setTimeout(() => {
+                if (typeof window.openOrderModal === "function") {
+                    window.openOrderModal();
+                }
+            }, 100);
         } else if (action === "customer") {
             setActiveView("customers");
+
             window.setTimeout(() => {
                 openCustomerModal();
             }, 100);
         } else if (action === "report") {
-            showToast(
-                "Report generator",
-                "Report generation will be connected to the reporting service."
-            );
+            setActiveView("reports");
         }
 
         closeCommandPalette();
@@ -849,11 +1723,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     quickActionButton?.addEventListener("click", openCommandPalette);
 
-    exportButton?.addEventListener("click", () => {
-        showToast(
-            "Export prepared",
-            "Export functionality will connect to the reporting API."
-        );
+    exportButton?.addEventListener("click", async () => {
+        if (typeof window.exportBusinessReport === "function") {
+            await window.exportBusinessReport();
+        }
+    });
+
+    /* ============================================================
+       KPI RAIL
+       ============================================================ */
+
+    kpiPrev?.addEventListener("click", () => {
+        kpiRail?.scrollBy({
+            left: -300,
+            behavior: "smooth",
+        });
+    });
+
+    kpiNext?.addEventListener("click", () => {
+        kpiRail?.scrollBy({
+            left: 300,
+            behavior: "smooth",
+        });
     });
 
     /* ============================================================
@@ -861,60 +1752,674 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     revenuePeriod?.addEventListener("change", () => {
-        showToast(
-            "Period updated",
-            `Revenue view changed to ${revenuePeriod.value.toLowerCase()}.`
-        );
+        const value = revenuePeriod.value;
+
+        const days = value.includes("7")
+            ? 7
+            : value.includes("30")
+                ? 30
+                : value.includes("90")
+                    ? 90
+                    : 365;
+
+        loadRevenueChart(days);
     });
 
     /* ============================================================
-       DEMO INTERACTIONS
+       LIVE REVENUE CHART
        ============================================================ */
 
-    document.querySelectorAll(".text-button").forEach((button) => {
-        button.addEventListener("click", () => {
-            showToast(
-                "Module navigation",
-                "The detailed workspace will be connected to the API in the next phase."
-            );
-        });
-    });
+    async function loadRevenueChart(days = 30) {
+        const chart = document.getElementById("revenueChart");
+        const line = document.getElementById("revenueChartLine");
+        const fill = document.getElementById("revenueChartFill");
+        const totalElement = document.getElementById("revenueChartTotal");
+        const changeElement = document.getElementById("revenueChartChange");
 
-    document.querySelectorAll(".nav-item").forEach((item) => {
-        item.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                item.click();
-            }
-        });
-    });
-
-    /* ============================================================
-       TOAST
-       ============================================================ */
-
-    function showToast(title, message) {
-        if (!toast || !toastTitle || !toastMessage) {
+        if (!chart || !line || !fill) {
             return;
         }
 
-        toastTitle.textContent = title;
-        toastMessage.textContent = message;
+        try {
+            const response = await fetch(
+                `/api/v1/analytics/revenue-trend?days=${days}`,
+                {
+                    headers: {
+                        Accept: "application/json",
+                    },
+                },
+            );
 
-        toast.classList.add("visible");
+            if (!response.ok) {
+                throw new Error(`Revenue request failed: ${response.status}`);
+            }
 
-        if (toastTimer) {
-            window.clearTimeout(toastTimer);
+            const data = await response.json();
+
+            const values = data.map((item) => Number(item.revenue || 0));
+            const max = Math.max(...values, 1);
+            const width = 800;
+            const height = 300;
+
+            const points = values.map((value, index) => {
+                const x =
+                    values.length === 1
+                        ? width
+                        : (index / (values.length - 1)) * width;
+                const y = height - (value / max) * (height * 0.82) - 20;
+
+                return [x, y];
+            });
+
+            const path = points
+                .map(
+                    ([x, y], index) =>
+                        `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`,
+                )
+                .join(" ");
+
+            line.setAttribute("d", path);
+            fill.setAttribute(
+                "d",
+                `${path} L ${width} ${height} L 0 ${height} Z`,
+            );
+
+            const total = values.reduce((sum, value) => sum + value, 0);
+
+            if (totalElement) {
+                totalElement.textContent = `$${total.toLocaleString(
+                    "en-US",
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    },
+                )}`;
+            }
+
+            if (changeElement) {
+                changeElement.textContent = "Live";
+            }
+
+            const axisValues = [
+                max,
+                max * 0.75,
+                max * 0.5,
+                max * 0.25,
+            ];
+
+            [
+                "revenueAxisTop",
+                "revenueAxisHigh",
+                "revenueAxisMid",
+                "revenueAxisLow",
+            ].forEach((id, index) => {
+                const element = document.getElementById(id);
+
+                if (element) {
+                    element.textContent = `$${axisValues[index].toFixed(0)}`;
+                }
+            });
+
+            const xAxis = document.getElementById("revenueChartXAxis");
+
+            if (xAxis && data.length) {
+                const indices = [
+                    0,
+                    Math.floor(data.length / 4),
+                    Math.floor(data.length / 2),
+                    Math.floor((data.length * 3) / 4),
+                    data.length - 1,
+                ];
+
+                xAxis.innerHTML = indices
+                    .map((index) => {
+                        const date = new Date(`${data[index].date}T00:00:00`);
+
+                        return `<span>${date.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                        })}</span>`;
+                    })
+                    .join("");
+            }
+        } catch (error) {
+            console.error("Failed to load revenue chart:", error);
         }
-
-        toastTimer = window.setTimeout(() => {
-            toast.classList.remove("visible");
-        }, 3500);
     }
 
     /* ============================================================
-       BACKEND HEALTH CHECK
+       OVERVIEW DATA
        ============================================================ */
+
+    async function loadOverviewData() {
+        const formatCurrency = (value) =>
+            `$${Number(value || 0).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            })}`;
+    
+        const formatDate = (value) => {
+            if (!value) {
+                return "—";
+            }
+    
+            const date = new Date(value);
+    
+            if (Number.isNaN(date.getTime())) {
+                return value;
+            }
+    
+            return date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            });
+        };
+    
+        const escapeHtml = (value) =>
+            String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+    
+        const getStatusLabel = (status) => {
+            const labels = {
+                pending: "Pending",
+                confirmed: "Confirmed",
+                processing: "Processing",
+                shipped: "Shipped",
+                completed: "Completed",
+                cancelled: "Cancelled",
+            };
+    
+            return labels[status] || status || "Unknown";
+        };
+    
+        const getStatusClass = (status) => {
+            const normalized = String(status || "").toLowerCase();
+    
+            if (normalized === "completed") {
+                return "success";
+            }
+    
+            if (
+                normalized === "pending" ||
+                normalized === "confirmed" ||
+                normalized === "processing"
+            ) {
+                return "warning";
+            }
+    
+            if (normalized === "cancelled") {
+                return "danger";
+            }
+    
+            return "";
+        };
+    
+        const activityContainer = document.getElementById(
+            "overviewRecentActivity",
+        );
+        const ordersContainer = document.getElementById(
+            "overviewRecentOrders",
+        );
+        const healthScore = document.getElementById("businessHealthScore");
+        const healthStatus = document.getElementById(
+            "businessHealthStatusText",
+        );
+        const healthDescription = document.getElementById(
+            "businessHealthDescription",
+        );
+        const healthSubdescription = document.getElementById(
+            "businessHealthSubdescription",
+        );
+        const tickerOrders = document.getElementById("liveTickerOrders");
+    
+        try {
+            const [
+                analyticsResponse,
+                ordersResponse,
+                tasksResponse,
+                taskSummaryResponse,
+                inventoryResponse,
+            ] = await Promise.all([
+                fetch("/api/v1/analytics/summary", {
+                    headers: {
+                        Accept: "application/json",
+                    },
+                }),
+                fetch("/api/v1/orders?limit=5", {
+                    headers: {
+                        Accept: "application/json",
+                    },
+                }),
+                fetch("/api/v1/tasks?limit=5", {
+                    headers: {
+                        Accept: "application/json",
+                    },
+                }),
+                fetch("/api/v1/tasks/summary", {
+                    headers: {
+                        Accept: "application/json",
+                    },
+                }),
+                fetch("/api/v1/inventory/summary", {
+                    headers: {
+                        Accept: "application/json",
+                    },
+                }),
+            ]);
+    
+            const responses = [
+                analyticsResponse,
+                ordersResponse,
+                tasksResponse,
+                taskSummaryResponse,
+                inventoryResponse,
+            ];
+    
+            const failedResponse = responses.find(
+                (response) => !response.ok,
+            );
+    
+            if (failedResponse) {
+                throw new Error(
+                    `Overview request failed: ${failedResponse.status}`,
+                );
+            }
+    
+            const [
+                data,
+                ordersData,
+                tasksData,
+                taskSummary,
+                inventoryData,
+            ] = await Promise.all(
+                responses.map((response) => response.json()),
+            );
+    
+            const revenue = document.getElementById("overviewRevenue");
+            const orders = document.getElementById("overviewOrders");
+            const customerCount =
+                document.getElementById("overviewCustomers");
+            const inventoryHealth = document.getElementById(
+                "overviewInventoryHealth",
+            );
+            const inventoryStatus = document.getElementById(
+                "overviewInventoryStatus",
+            );
+            const inventoryReview = document.getElementById(
+                "overviewInventoryReview",
+            );
+    
+            if (revenue) {
+                revenue.textContent = formatCurrency(data.revenue);
+            }
+    
+            if (orders) {
+                orders.textContent = Number(
+                    data.orders || 0,
+                ).toLocaleString();
+            }
+    
+            if (customerCount) {
+                customerCount.textContent = Number(
+                    data.customers || 0,
+                ).toLocaleString();
+            }
+    
+            const inventoryItems = Number(
+                inventoryData.total_items || 0,
+            );
+            const activeInventoryItems = Number(
+                inventoryData.active_items || 0,
+            );
+            const lowStockItems = Number(
+                inventoryData.low_stock_items || 0,
+            );
+    
+            const inventoryScore =
+                inventoryItems > 0
+                    ? Math.max(
+                        0,
+                        Math.round(
+                            ((inventoryItems - lowStockItems) /
+                                inventoryItems) *
+                                100,
+                        ),
+                    )
+                    : 0;
+    
+            if (inventoryHealth) {
+                inventoryHealth.textContent =
+                    inventoryItems > 0
+                        ? `${inventoryScore}%`
+                        : "0%";
+            }
+    
+            if (inventoryStatus) {
+                inventoryStatus.textContent =
+                    inventoryItems === 0
+                        ? "No inventory"
+                        : inventoryScore >= 90
+                            ? "Healthy"
+                            : inventoryScore >= 70
+                                ? "Attention"
+                                : "Degraded";
+            }
+    
+            if (inventoryReview) {
+                inventoryReview.textContent =
+                    inventoryItems === 0
+                        ? "No inventory tracked"
+                        : `${lowStockItems} items need review`;
+            }
+    
+            if (tickerOrders) {
+                tickerOrders.textContent =
+                    `${Number(data.orders || 0).toLocaleString()} orders in workspace`;
+            }
+            const taskTotal = Number(taskSummary.total || 0);
+            const taskCompleted = Number(taskSummary.completed || 0);
+
+            const taskCompletion = taskTotal
+                ? Math.round((taskCompleted / taskTotal) * 1000) / 10
+                : 0;
+    
+            const taskValue = document.getElementById(
+                "overviewTaskCompletion",
+            );
+            const taskBar = document.getElementById("overviewTaskBar");
+    
+            if (taskValue) {
+                taskValue.textContent = `${taskCompletion}%`;
+            }
+    
+            if (taskBar) {
+                taskBar.style.width = `${Math.min(
+                    100,
+                    Math.max(0, taskCompletion),
+                )}%`;
+            }
+    
+            /*
+             * Recent orders
+             */
+            const recentOrders = Array.isArray(ordersData.items)
+                ? ordersData.items
+                : [];
+    
+            if (ordersContainer) {
+                if (!recentOrders.length) {
+                    ordersContainer.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                No orders found.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    ordersContainer.innerHTML = recentOrders
+                        .map((order) => {
+                            const customerName =
+                                order.customer?.name ||
+                                order.customer?.company ||
+                                `Customer #${order.customer_id}`;
+    
+                            const statusClass =
+                                getStatusClass(order.status);
+    
+                            return `
+                                <tr>
+                                    <td>
+                                        <strong>${escapeHtml(
+                                            order.order_number,
+                                        )}</strong>
+                                    </td>
+                                    <td>${escapeHtml(customerName)}</td>
+                                    <td>${escapeHtml(
+                                        formatDate(order.created_at),
+                                    )}</td>
+                                    <td>${escapeHtml(
+                                        formatCurrency(order.total_amount),
+                                    )}</td>
+                                    <td>
+                                        <span class="status-badge ${statusClass}">
+                                            ${escapeHtml(
+                                                getStatusLabel(order.status),
+                                            )}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        })
+                        .join("");
+                }
+            }
+    
+            /*
+             * Recent activity
+             */
+            const recentTasks = Array.isArray(tasksData.items)
+                ? tasksData.items
+                : [];
+    
+            if (activityContainer) {
+                if (!recentTasks.length) {
+                    activityContainer.innerHTML = `
+                        <div class="empty-state">
+                            No recent activity.
+                        </div>
+                    `;
+                } else {
+                    activityContainer.innerHTML = recentTasks
+                        .map((task) => {
+                            const priority =
+                                String(task.priority || "normal")
+                                    .toLowerCase();
+    
+                            return `
+                                <div class="activity-item">
+                                    <div class="activity-icon">
+                                        ${priority === "high" ? "!" : "✓"}
+                                    </div>
+                                    <div class="activity-content">
+                                        <strong>${escapeHtml(
+                                            task.title,
+                                        )}</strong>
+                                        <span>
+                                            ${escapeHtml(
+                                                task.status
+                                                    ? task.status
+                                                          .replace(
+                                                              /_/g,
+                                                              " ",
+                                                          )
+                                                    : "Task",
+                                            )}
+                                            ·
+                                            ${escapeHtml(
+                                                task.assignee ||
+                                                    "Unassigned",
+                                            )}
+                                        </span>
+                                    </div>
+                                    <time>${escapeHtml(
+                                        formatDate(task.created_at),
+                                    )}</time>
+                                </div>
+                            `;
+                        })
+                        .join("");
+                }
+            }
+    
+            /*
+             * Business health
+             *
+             * The score reflects the actual operational data available
+             * rather than claiming external services are healthy.
+             */
+            const totalOrders = Number(
+                ordersData.total ?? data.orders ?? 0,
+            );
+            const pendingOrders = recentOrders.filter(
+                (order) =>
+                    String(order.status || "").toLowerCase() ===
+                    "pending",
+            ).length;
+    
+            const totalTasks = Number(
+                taskSummary.total ??
+                    tasksData.total ??
+                    data.tasks ??
+                    0,
+            );
+            const overdueTasks = Number(
+                taskSummary.overdue ??
+                    taskSummary.overdue_tasks ??
+                    0,
+            );
+    
+            const orderCompletionRate =
+                totalOrders > 0
+                    ? Math.round(
+                        (recentOrders.filter(
+                            (order) =>
+                                String(order.status || "")
+                                    .toLowerCase() === "completed",
+                        ).length /
+                            totalOrders) *
+                            100,
+                    )
+                    : 100;
+    
+            const taskScore =
+                totalTasks > 0
+                    ? Math.round(
+                        Math.max(
+                            0,
+                            Math.min(
+                                100,
+                                Number(
+                                    taskSummary.completion_rate ??
+                                        data.completion_rate ??
+                                        0,
+                                ),
+                            ),
+                        ),
+                    )
+                    : 100;
+    
+            const inventoryHealthScore =
+                inventoryItems > 0 ? inventoryScore : 100;
+    
+            const orderScore =
+                totalOrders > 0
+                    ? Math.max(
+                        0,
+                        100 - Math.min(50, pendingOrders * 10),
+                    )
+                    : 100;
+    
+            const overduePenalty = Math.min(30, overdueTasks * 10);
+    
+            const businessScore = Math.round(
+                Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        (inventoryHealthScore +
+                            orderScore +
+                            taskScore +
+                            (100 - overduePenalty)) /
+                            4,
+                    ),
+                ),
+            );
+    
+            let businessStatus = "Operational";
+            let businessDescription =
+                "Operations are running smoothly.";
+            let businessSubdescription =
+                "Live workspace metrics are responding normally.";
+    
+            if (businessScore < 90) {
+                businessStatus = "Attention";
+                businessDescription =
+                    "Some operational areas need attention.";
+                businessSubdescription =
+                    "Review the live workspace metrics for potential follow-up.";
+            }
+    
+            if (businessScore < 70) {
+                businessStatus = "Degraded";
+                businessDescription =
+                    "Several operational signals need attention.";
+                businessSubdescription =
+                    "Review orders, inventory, and task workload.";
+            }
+    
+            if (healthScore) {
+                healthScore.textContent = businessScore;
+            }
+    
+            if (healthStatus) {
+                healthStatus.textContent = businessStatus;
+            }
+    
+            if (healthDescription) {
+                healthDescription.textContent = businessDescription;
+            }
+    
+            if (healthSubdescription) {
+                healthSubdescription.textContent =
+                    businessSubdescription;
+            }
+    
+            await loadRevenueChart();
+        } catch (error) {
+            console.error("Failed to load overview data:", error);
+    
+            if (activityContainer) {
+                activityContainer.innerHTML = `
+                    <div class="empty-state">
+                        Unable to load recent activity.
+                    </div>
+                `;
+            }
+    
+            if (ordersContainer) {
+                ordersContainer.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            Unable to load recent orders.
+                        </td>
+                    </tr>
+                `;
+            }
+    
+            if (healthStatus) {
+                healthStatus.textContent = "Unavailable";
+            }
+    
+            if (healthScore) {
+                healthScore.textContent = "—";
+            }
+    
+            if (healthDescription) {
+                healthDescription.textContent =
+                    "Business health data is unavailable.";
+            }
+    
+            if (healthSubdescription) {
+                healthSubdescription.textContent =
+                    "Check the API connection and refresh the workspace.";
+            }
+        }
+    }
 
     async function verifyBackend() {
         try {
@@ -924,934 +2429,39 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
             });
 
-            if (!response.ok) {
-                throw new Error(`Health endpoint returned ${response.status}`);
-            }
-
             const data = await response.json();
 
-            if (data.status === "healthy") {
-                document.body.dataset.backend = "healthy";
+            const statusText = document.querySelector(
+                ".system-status span:last-child",
+            );
+
+            if (statusText && data.status === "healthy") {
+                statusText.textContent = "All systems operational";
             }
         } catch (error) {
-            console.warn("Backend health check failed:", error);
-            document.body.dataset.backend = "offline";
+            console.error("Backend health check failed:", error);
+
+            const statusText = document.querySelector(
+                ".system-status span:last-child",
+            );
+
+            if (statusText) {
+                statusText.textContent = "API connection unavailable";
+            }
         }
     }
-
-    /* ============================================================
-       CUSTOMER WORKSPACE
-       ============================================================ */
-
-    installCustomerStyles();
     createCustomersView();
-
-    function createCustomersView() {
-        const dashboard = document.getElementById("dashboard");
-
-        if (!dashboard || document.getElementById("customersView")) {
-            return;
-        }
-
-        const customersView = document.createElement("section");
-
-        customersView.className = "customers-view";
-        customersView.id = "customersView";
-
-        customersView.innerHTML = `
-            <div class="customer-page-header">
-                <div>
-                    <span class="eyebrow">Relationship management</span>
-                    <h1>Customers</h1>
-                    <p>Manage customer profiles, relationships and account information.</p>
-                </div>
-
-                <div class="customer-header-actions">
-                    <button
-                        class="customer-button"
-                        id="refreshCustomersButton"
-                        type="button"
-                    >
-                        ↻ Refresh
-                    </button>
-
-                    <button
-                        class="customer-button primary"
-                        id="addCustomerButton"
-                        type="button"
-                    >
-                        + Add customer
-                    </button>
-                </div>
-            </div>
-
-            <div class="customer-toolbar">
-                <div class="customer-search">
-                    <span>⌕</span>
-                    <input
-                        id="customerSearch"
-                        type="search"
-                        placeholder="Search by name, email or company..."
-                        autocomplete="off"
-                    >
-                </div>
-
-                <select class="customer-filter" id="customerStatusFilter">
-                    <option value="">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="prospect">Prospect</option>
-                    <option value="inactive">Inactive</option>
-                </select>
-            </div>
-
-            <div class="customer-summary">
-                <span id="customerResultSummary">Loading customers...</span>
-                <span>API: <strong id="customerApiStatus">Connected</strong></span>
-            </div>
-
-            <div class="customer-table-card">
-                <div class="customer-table-scroll">
-                    <div id="customerTableContainer">
-                        <div class="customer-loading">
-                            <div class="customer-spinner"></div>
-                            Loading customer workspace...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        dashboard.parentNode.insertBefore(customersView, dashboard.nextSibling);
-
-        document
-            .getElementById("addCustomerButton")
-            ?.addEventListener("click", () => openCustomerModal());
-
-        document
-            .getElementById("refreshCustomersButton")
-            ?.addEventListener("click", () => loadCustomers());
-
-        document
-            .getElementById("customerStatusFilter")
-            ?.addEventListener("change", () => loadCustomers());
-
-        document
-            .getElementById("customerSearch")
-            ?.addEventListener("input", () => {
-                window.clearTimeout(customerSearchTimer);
-
-                customerSearchTimer = window.setTimeout(() => {
-                    loadCustomers();
-                }, 300);
-            });
-    }
-
-    async function loadCustomers() {
-        const container = document.getElementById("customerTableContainer");
-        const summary = document.getElementById("customerResultSummary");
-        const apiStatus = document.getElementById("customerApiStatus");
-
-        if (!container) {
-            return;
-        }
-
-        container.innerHTML = `
-            <div class="customer-loading">
-                <div class="customer-spinner"></div>
-                Loading customers...
-            </div>
-        `;
-
-        const search =
-            document.getElementById("customerSearch")?.value.trim() || "";
-
-        const status =
-            document.getElementById("customerStatusFilter")?.value || "";
-
-        const params = new URLSearchParams();
-
-        if (search) {
-            params.set("search", search);
-        }
-
-        if (status) {
-            params.set("status", status);
-        }
-
-        params.set("limit", "100");
-
-        try {
-            const response = await fetch(
-                `/api/v1/customers?${params.toString()}`,
-                {
-                    headers: {
-                        Accept: "application/json",
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`Customer API returned ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            customers = data.items || [];
-
-            if (summary) {
-                summary.textContent =
-                    `${data.total} customer${data.total === 1 ? "" : "s"} found`;
-            }
-
-            if (apiStatus) {
-                apiStatus.textContent = "Connected";
-            }
-
-            renderCustomers(customers);
-            updateCustomerKpi(data.total);
-        } catch (error) {
-            console.error("Failed to load customers:", error);
-
-            if (summary) {
-                summary.textContent = "Unable to load customers";
-            }
-
-            if (apiStatus) {
-                apiStatus.textContent = "Offline";
-            }
-
-            container.innerHTML = `
-                <div class="customer-empty">
-                    <div class="customer-empty-icon">!</div>
-                    <h3>Customer data unavailable</h3>
-                    <p>We couldn't reach the customer API. Check the backend and try again.</p>
-                    <button class="customer-button primary" type="button" id="retryCustomersButton">
-                        Try again
-                    </button>
-                </div>
-            `;
-
-            document
-                .getElementById("retryCustomersButton")
-                ?.addEventListener("click", loadCustomers);
-        }
-    }
-
-    function renderCustomers(items) {
-        const container = document.getElementById("customerTableContainer");
-
-        if (!container) {
-            return;
-        }
-
-        if (!items.length) {
-            container.innerHTML = `
-                <div class="customer-empty">
-                    <div class="customer-empty-icon">◎</div>
-                    <h3>No customers found</h3>
-                    <p>
-                        ${
-                            document.getElementById("customerSearch")?.value
-                                ? "Try a different search term."
-                                : "Create your first customer to start building your workspace."
-                        }
-                    </p>
-                    <button class="customer-button primary" type="button" id="emptyAddCustomerButton">
-                        + Add customer
-                    </button>
-                </div>
-            `;
-
-            document
-                .getElementById("emptyAddCustomerButton")
-                ?.addEventListener("click", () => openCustomerModal());
-
-            return;
-        }
-
-        const rows = items.map((customer) => {
-            const initials = getInitials(customer.name);
-            const company = customer.company || "Individual account";
-
-            return `
-                <tr>
-                    <td>
-                        <div class="customer-identity">
-                            <div class="customer-avatar">${escapeHtml(initials)}</div>
-                            <div>
-                                <div class="customer-name">${escapeHtml(customer.name)}</div>
-                                <div class="customer-subtext">
-                                    Customer #${customer.id}
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td>${escapeHtml(company)}</td>
-
-                    <td>${escapeHtml(customer.email)}</td>
-
-                    <td>
-                        <span class="customer-status ${escapeHtml(customer.status)}">
-                            ${escapeHtml(customer.status)}
-                        </span>
-                    </td>
-
-                    <td>
-                        ${escapeHtml(customer.phone || "—")}
-                    </td>
-
-                    <td>
-                        <div class="customer-actions">
-                            <button
-                                class="customer-action"
-                                type="button"
-                                title="View customer"
-                                aria-label="View ${escapeHtml(customer.name)}"
-                                data-customer-action="view"
-                                data-customer-id="${customer.id}"
-                            >
-                                ↗
-                            </button>
-
-                            <button
-                                class="customer-action"
-                                type="button"
-                                title="Edit customer"
-                                aria-label="Edit ${escapeHtml(customer.name)}"
-                                data-customer-action="edit"
-                                data-customer-id="${customer.id}"
-                            >
-                                ✎
-                            </button>
-
-                            <button
-                                class="customer-action"
-                                type="button"
-                                title="Delete customer"
-                                aria-label="Delete ${escapeHtml(customer.name)}"
-                                data-customer-action="delete"
-                                data-customer-id="${customer.id}"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join("");
-
-        container.innerHTML = `
-            <table class="customer-table">
-                <thead>
-                    <tr>
-                        <th>Customer</th>
-                        <th>Company</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Phone</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
-        `;
-
-        container
-            .querySelectorAll("[data-customer-action]")
-            .forEach((button) => {
-                button.addEventListener("click", () => {
-                    const action = button.dataset.customerAction;
-                    const id = Number(button.dataset.customerId);
-
-                    if (action === "view") {
-                        viewCustomer(id);
-                    } else if (action === "edit") {
-                        editCustomer(id);
-                    } else if (action === "delete") {
-                        deleteCustomer(id);
-                    }
-                });
-            });
-    }
-
-    function updateCustomerKpi(total) {
-        const cards = document.querySelectorAll(".kpi-card");
-
-        cards.forEach((card) => {
-            const text = card.textContent;
-
-            if (!text.includes("Customers")) {
-                return;
-            }
-
-            const value = card.querySelector(".kpi-value");
-
-            if (value) {
-                value.textContent = Number(total).toLocaleString();
-            }
-        });
-    }
-
-    /* ============================================================
-       CUSTOMER MODAL
-       ============================================================ */
-
-    function ensureCustomerModal() {
-        if (document.getElementById("customerModalBackdrop")) {
-            return;
-        }
-
-        const modal = document.createElement("div");
-
-        modal.className = "customer-modal-backdrop";
-        modal.id = "customerModalBackdrop";
-        modal.setAttribute("aria-hidden", "true");
-
-        modal.innerHTML = `
-            <div class="customer-modal" role="dialog" aria-modal="true">
-                <div class="customer-modal-header">
-                    <div>
-                        <h2 id="customerModalTitle">Add customer</h2>
-                        <p id="customerModalSubtitle">
-                            Create a customer profile in OpsFlow.
-                        </p>
-                    </div>
-
-                    <button
-                        class="customer-close"
-                        id="customerModalClose"
-                        type="button"
-                        aria-label="Close"
-                    >
-                        ×
-                    </button>
-                </div>
-
-                <form class="customer-form" id="customerForm">
-                    <div class="customer-form-error" id="customerFormError"></div>
-
-                    <div class="customer-form-grid">
-                        <div class="customer-field full">
-                            <label for="customerName">Full name *</label>
-                            <input
-                                id="customerName"
-                                name="name"
-                                required
-                                minlength="2"
-                                maxlength="150"
-                                placeholder="e.g. Acme Corporation"
-                            >
-                        </div>
-
-                        <div class="customer-field">
-                            <label for="customerEmail">Email *</label>
-                            <input
-                                id="customerEmail"
-                                name="email"
-                                type="email"
-                                required
-                                placeholder="contact@example.com"
-                            >
-                        </div>
-
-                        <div class="customer-field">
-                            <label for="customerPhone">Phone</label>
-                            <input
-                                id="customerPhone"
-                                name="phone"
-                                maxlength="50"
-                                placeholder="+254 700 000 000"
-                            >
-                        </div>
-
-                        <div class="customer-field">
-                            <label for="customerCompany">Company</label>
-                            <input
-                                id="customerCompany"
-                                name="company"
-                                maxlength="150"
-                                placeholder="Company or organization"
-                            >
-                        </div>
-
-                        <div class="customer-field">
-                            <label for="customerStatus">Status</label>
-                            <select id="customerStatus" name="status">
-                                <option value="active">Active</option>
-                                <option value="prospect">Prospect</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-
-                        <div class="customer-field full">
-                            <label for="customerNotes">Notes</label>
-                            <textarea
-                                id="customerNotes"
-                                name="notes"
-                                maxlength="5000"
-                                placeholder="Optional account notes..."
-                            ></textarea>
-                        </div>
-                    </div>
-
-                    <div class="customer-form-footer">
-                        <button
-                            class="customer-button"
-                            id="customerCancelButton"
-                            type="button"
-                        >
-                            Cancel
-                        </button>
-
-                        <button
-                            class="customer-button primary"
-                            id="customerSubmitButton"
-                            type="submit"
-                        >
-                            Create customer
-                        </button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        document
-            .getElementById("customerModalClose")
-            ?.addEventListener("click", closeCustomerModal);
-
-        document
-            .getElementById("customerCancelButton")
-            ?.addEventListener("click", closeCustomerModal);
-
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                closeCustomerModal();
-            }
-        });
-
-        document
-            .getElementById("customerForm")
-            ?.addEventListener("submit", submitCustomerForm);
-    }
-
-    function openCustomerModal(customer = null) {
-        ensureCustomerModal();
-
-        const modal = document.getElementById("customerModalBackdrop");
-        const title = document.getElementById("customerModalTitle");
-        const subtitle = document.getElementById("customerModalSubtitle");
-        const submitButton = document.getElementById("customerSubmitButton");
-        const error = document.getElementById("customerFormError");
-
-        editingCustomerId = customer?.id || null;
-
-        title.textContent = customer ? "Edit customer" : "Add customer";
-
-        subtitle.textContent = customer
-            ? "Update the customer profile and account information."
-            : "Create a customer profile in OpsFlow.";
-
-        submitButton.textContent = customer
-            ? "Save changes"
-            : "Create customer";
-
-        error.classList.remove("visible");
-        error.textContent = "";
-
-        setFormValue("customerName", customer?.name || "");
-        setFormValue("customerEmail", customer?.email || "");
-        setFormValue("customerPhone", customer?.phone || "");
-        setFormValue("customerCompany", customer?.company || "");
-        setFormValue("customerStatus", customer?.status || "active");
-        setFormValue("customerNotes", customer?.notes || "");
-
-        modal.classList.add("open");
-        modal.setAttribute("aria-hidden", "false");
-
-        window.setTimeout(() => {
-            document.getElementById("customerName")?.focus();
-        }, 80);
-    }
-
-    function closeCustomerModal() {
-        const modal = document.getElementById("customerModalBackdrop");
-
-        if (!modal) {
-            return;
-        }
-
-        modal.classList.remove("open");
-        modal.setAttribute("aria-hidden", "true");
-        editingCustomerId = null;
-    }
-
-    function setFormValue(id, value) {
-        const field = document.getElementById(id);
-
-        if (field) {
-            field.value = value;
-        }
-    }
-
-    async function submitCustomerForm(event) {
-        event.preventDefault();
-
-        const submitButton = document.getElementById("customerSubmitButton");
-        const error = document.getElementById("customerFormError");
-
-        const payload = {
-            name: document.getElementById("customerName").value.trim(),
-            email: document.getElementById("customerEmail").value.trim(),
-            phone: document.getElementById("customerPhone").value.trim() || null,
-            company:
-                document.getElementById("customerCompany").value.trim() || null,
-            status: document.getElementById("customerStatus").value,
-            notes: document.getElementById("customerNotes").value.trim() || null,
-        };
-
-        error.classList.remove("visible");
-        error.textContent = "";
-
-        submitButton.disabled = true;
-        submitButton.textContent = editingCustomerId
-            ? "Saving..."
-            : "Creating...";
-
-        try {
-            const endpoint = editingCustomerId
-                ? `/api/v1/customers/${editingCustomerId}`
-                : "/api/v1/customers";
-
-            const method = editingCustomerId ? "PATCH" : "POST";
-
-            const response = await fetch(endpoint, {
-                method,
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-            });
-
-            const data = await response.json().catch(() => null);
-
-            if (!response.ok) {
-                throw new Error(getApiErrorMessage(data, response.status));
-            }
-
-            const wasEditing = Boolean(editingCustomerId);
-
-            closeCustomerModal();
-            await loadCustomers();
-
-            showToast(
-                wasEditing ? "Customer updated" : "Customer created",
-                wasEditing
-                    ? `${payload.name}'s profile was updated successfully.`
-                    : `${payload.name} was added to your customer workspace.`
-            );
-        } catch (requestError) {
-            console.error("Customer save failed:", requestError);
-
-            error.textContent = requestError.message;
-            error.classList.add("visible");
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = editingCustomerId
-                ? "Save changes"
-                : "Create customer";
-        }
-    }
-
-    /* ============================================================
-       CUSTOMER DETAILS
-       ============================================================ */
-
-    function viewCustomer(customerId) {
-        const customer = customers.find(
-            (item) => Number(item.id) === Number(customerId)
-        );
-
-        if (!customer) {
-            showToast("Customer unavailable", "The customer could not be found.");
-            return;
-        }
-
-        ensureCustomerDetailModal(customer);
-    }
-
-    function ensureCustomerDetailModal(customer) {
-        const existing = document.getElementById("customerDetailBackdrop");
-
-        if (existing) {
-            existing.remove();
-        }
-
-        const modal = document.createElement("div");
-
-        modal.className = "customer-modal-backdrop open";
-        modal.id = "customerDetailBackdrop";
-
-        modal.innerHTML = `
-            <div class="customer-modal" role="dialog" aria-modal="true">
-                <div class="customer-modal-header">
-                    <div>
-                        <h2>Customer profile</h2>
-                        <p>Account details and relationship information.</p>
-                    </div>
-
-                    <button
-                        class="customer-close"
-                        type="button"
-                        id="customerDetailClose"
-                        aria-label="Close"
-                    >
-                        ×
-                    </button>
-                </div>
-
-                <div class="customer-detail">
-                    <div class="customer-detail-hero">
-                        <div class="customer-detail-avatar">
-                            ${escapeHtml(getInitials(customer.name))}
-                        </div>
-
-                        <div>
-                            <h3>${escapeHtml(customer.name)}</h3>
-                            <p>${escapeHtml(customer.company || "Individual account")}</p>
-                        </div>
-                    </div>
-
-                    <div class="customer-detail-grid">
-                        <div class="customer-detail-item">
-                            <small>Email</small>
-                            <strong>${escapeHtml(customer.email)}</strong>
-                        </div>
-
-                        <div class="customer-detail-item">
-                            <small>Phone</small>
-                            <strong>${escapeHtml(customer.phone || "Not provided")}</strong>
-                        </div>
-
-                        <div class="customer-detail-item">
-                            <small>Status</small>
-                            <strong>${escapeHtml(customer.status)}</strong>
-                        </div>
-
-                        <div class="customer-detail-item">
-                            <small>Customer ID</small>
-                            <strong>#${customer.id}</strong>
-                        </div>
-
-                        <div class="customer-detail-item">
-                            <small>Created</small>
-                            <strong>${formatDate(customer.created_at)}</strong>
-                        </div>
-
-                        <div class="customer-detail-item">
-                            <small>Updated</small>
-                            <strong>${formatDate(customer.updated_at)}</strong>
-                        </div>
-
-                        <div class="customer-detail-item" style="grid-column: 1 / -1;">
-                            <small>Notes</small>
-                            <strong>${escapeHtml(customer.notes || "No notes added.")}</strong>
-                        </div>
-                    </div>
-
-                    <div class="customer-form-footer">
-                        <button
-                            class="customer-button"
-                            id="customerDetailEdit"
-                            type="button"
-                        >
-                            Edit customer
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        document
-            .getElementById("customerDetailClose")
-            ?.addEventListener("click", () => modal.remove());
-
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                modal.remove();
-            }
-        });
-
-        document
-            .getElementById("customerDetailEdit")
-            ?.addEventListener("click", () => {
-                modal.remove();
-                openCustomerModal(customer);
-            });
-    }
-
-    function editCustomer(customerId) {
-        const customer = customers.find(
-            (item) => Number(item.id) === Number(customerId)
-        );
-
-        if (!customer) {
-            showToast("Customer unavailable", "The customer could not be found.");
-            return;
-        }
-
-        openCustomerModal(customer);
-    }
-
-    /* ============================================================
-       CUSTOMER DELETE
-       ============================================================ */
-
-    async function deleteCustomer(customerId) {
-        const customer = customers.find(
-            (item) => Number(item.id) === Number(customerId)
-        );
-
-        if (!customer) {
-            showToast("Customer unavailable", "The customer could not be found.");
-            return;
-        }
-
-        const confirmed = window.confirm(
-            `Delete ${customer.name}? This action cannot be undone.`
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `/api/v1/customers/${customer.id}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        Accept: "application/json",
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => null);
-
-                throw new Error(
-                    getApiErrorMessage(data, response.status)
-                );
-            }
-
-            await loadCustomers();
-
-            showToast(
-                "Customer deleted",
-                `${customer.name} was removed from the customer workspace.`
-            );
-        } catch (error) {
-            console.error("Customer deletion failed:", error);
-
-            showToast(
-                "Delete failed",
-                error.message || "The customer could not be deleted."
-            );
-        }
-    }
-
-    /* ============================================================
-       CUSTOMER HELPERS
-       ============================================================ */
-
-    function getInitials(name) {
-        const parts = String(name || "")
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-        if (!parts.length) {
-            return "?";
-        }
-
-        if (parts.length === 1) {
-            return parts[0].slice(0, 2).toUpperCase();
-        }
-
-        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-
-    function escapeHtml(value) {
-        return String(value ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    function formatDate(value) {
-        if (!value) {
-            return "—";
-        }
-
-        const date = new Date(value);
-
-        if (Number.isNaN(date.getTime())) {
-            return String(value);
-        }
-
-        return new Intl.DateTimeFormat(undefined, {
-            dateStyle: "medium",
-            timeStyle: "short",
-        }).format(date);
-    }
-
-    function getApiErrorMessage(data, statusCode) {
-        if (data?.detail) {
-            if (Array.isArray(data.detail)) {
-                return data.detail
-                    .map((item) => item.msg || "Validation error")
-                    .join(" ");
-            }
-
-            return String(data.detail);
-        }
-
-        return `Request failed with HTTP ${statusCode}.`;
-    }
-
-    /* ============================================================
-       KEYBOARD ACCESS
-       ============================================================ */
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key !== "Escape") {
-            return;
-        }
-
-        const customerModal = document.getElementById(
-            "customerModalBackdrop"
-        );
-
-        if (customerModal?.classList.contains("open")) {
-            closeCustomerModal();
-        }
-
-        const detailModal = document.getElementById(
-            "customerDetailBackdrop"
-        );
-
-        detailModal?.remove();
-    });
-
+    loadOverviewData();
     verifyBackend();
 });
+
+
+
+
+
+
+
+
+
+
+

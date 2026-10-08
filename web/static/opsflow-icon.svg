@@ -1,0 +1,55 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 512 512"
+    role="img"
+    aria-labelledby="title desc"
+>
+    <title id="title">OpsFlow</title>
+    <desc id="desc">
+        Geometric OpsFlow O mark with an electric blue flow arc and node.
+    </desc>
+
+    <!-- Transparent background -->
+
+    <!-- Deep navy squircle O ring -->
+    <path
+        fill="#0B1530"
+        fill-rule="evenodd"
+        d="
+            M256 36
+            C130.4 36 36 130.4 36 256
+            C36 381.6 130.4 476 256 476
+            C381.6 476 476 381.6 476 256
+            C476 130.4 381.6 36 256 36
+            Z
+
+            M256 112
+            C174 112 112 174 112 256
+            C112 338 174 400 256 400
+            C338 400 400 338 400 256
+            C400 174 338 112 256 112
+            Z
+        "
+    />
+
+    <!-- Electric blue-violet flow arc -->
+    <path
+        d="
+            M256 74
+            C356 74 438 154 438 256
+            C438 291 428 324 410 353
+        "
+        fill="none"
+        stroke="#4C5BFF"
+        stroke-width="48"
+        stroke-linecap="round"
+    />
+
+    <!-- Flow node -->
+    <circle
+        cx="424"
+        cy="369"
+        r="28"
+        fill="#4C5BFF"
+    />
+</svg>

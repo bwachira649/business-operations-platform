@@ -1,11 +1,15 @@
 """Customer database model."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from business_operations.db.session import Base
+
+if TYPE_CHECKING:
+    from business_operations.models.order import Order
 
 
 class Customer(Base):
@@ -61,4 +65,8 @@ class Customer(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    orders: Mapped[list[Order]] = relationship(
+        back_populates="customer",
     )

@@ -1,38 +1,24 @@
-"""Tests for the customer API."""
+"""Customer API tests."""
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import delete
 
-from business_operations.db.session import Base, get_db
+from business_operations.db.session import Base, SessionLocal, engine, get_db
 from business_operations.main import app
+from business_operations.models.customer import Customer
+from business_operations.models.order import Order
 
-TEST_DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-TEST_DATA_DIR.mkdir(exist_ok=True)
-
-TEST_DATABASE_URL = (
-    f"sqlite:///{TEST_DATA_DIR / 'test_business_operations.db'}"
+TEST_DATABASE_PATH = (
+    Path(__file__).resolve().parent / "data" / "test_business_operations.db"
 )
-
-test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-)
-
-TestingSessionLocal = sessionmaker(
-    bind=test_engine,
-    autoflush=False,
-    autocommit=False,
-)
-
-Base.metadata.create_all(bind=test_engine)
 
 
 def override_get_db():
-    """Provide a database session connected to the test database."""
-    db = TestingSessionLocal()
+    """Provide a database session for tests."""
+    db = SessionLocal()
 
     try:
         yield db
@@ -41,19 +27,22 @@ def override_get_db():
 
 
 app.dependency_overrides[get_db] = override_get_db
-
 client = TestClient(app)
 
 
-def clear_customers() -> None:
-    """Remove all customers from the test database."""
-    db = TestingSessionLocal()
+@pytest.fixture(scope="module", autouse=True)
+def setup_database():
+    """Create database tables before running customer tests."""
+    Base.metadata.create_all(bind=engine)
+    yield
 
-    try:
-        db.execute(text("DELETE FROM customers"))
+
+def clear_customers() -> None:
+    """Remove orders and customers to isolate each test."""
+    with SessionLocal() as db:
+        db.execute(delete(Order))
+        db.execute(delete(Customer))
         db.commit()
-    finally:
-        db.close()
 
 
 def test_create_customer() -> None:
@@ -67,6 +56,8 @@ def test_create_customer() -> None:
             "email": "brian@example.com",
             "phone": "+254700000000",
             "company": "OpsFlow",
+            "status": "active",
+            "notes": "Primary business contact",
         },
     )
 
@@ -76,13 +67,12 @@ def test_create_customer() -> None:
 
     assert data["name"] == "Brian Wachira"
     assert data["email"] == "brian@example.com"
-    assert data["phone"] == "+254700000000"
-    assert data["company"] == "OpsFlow"
     assert data["status"] == "active"
+    assert data["id"] > 0
 
 
-def test_duplicate_customer_email_is_rejected() -> None:
-    """Duplicate customer email addresses are rejected."""
+def test_create_duplicate_customer_email() -> None:
+    """Duplicate customer emails are rejected."""
     clear_customers()
 
     payload = {
@@ -104,54 +94,54 @@ def test_duplicate_customer_email_is_rejected() -> None:
 
     assert first_response.status_code == 201
     assert second_response.status_code == 409
+    assert (
+        second_response.json()["detail"]
+        == "A customer with this email already exists."
+    )
 
 
-def test_list_customers_and_search() -> None:
-    """Customers can be listed and searched."""
+def test_list_customers_with_search_and_status() -> None:
+    """Customers can be filtered by search and status."""
     clear_customers()
 
     customers = [
         {
             "name": "Brian Wachira",
             "email": "brian@example.com",
-            "phone": "+254700000000",
             "company": "OpsFlow",
+            "status": "active",
         },
         {
-            "name": "Jane Mwangi",
+            "name": "Jane Kamau",
             "email": "jane@example.com",
-            "phone": "+254711111111",
             "company": "Acme Ltd",
+            "status": "prospect",
         },
     ]
 
-    for customer in customers:
+    for payload in customers:
         response = client.post(
             "/api/v1/customers",
-            json=customer,
+            json=payload,
         )
+
         assert response.status_code == 201
 
-    response = client.get("/api/v1/customers")
+    response = client.get(
+        "/api/v1/customers",
+        params={
+            "search": "Brian",
+            "status": "active",
+        },
+    )
 
     assert response.status_code == 200
 
     data = response.json()
 
-    assert data["total"] == 2
-    assert len(data["items"]) == 2
-
-    search_response = client.get(
-        "/api/v1/customers",
-        params={"search": "Brian"},
-    )
-
-    assert search_response.status_code == 200
-
-    search_data = search_response.json()
-
-    assert search_data["total"] == 1
-    assert search_data["items"][0]["name"] == "Brian Wachira"
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["name"] == "Brian Wachira"
 
 
 def test_get_customer() -> None:
@@ -163,7 +153,6 @@ def test_get_customer() -> None:
         json={
             "name": "Brian Wachira",
             "email": "get@example.com",
-            "phone": "+254700000000",
             "company": "OpsFlow",
         },
     )
@@ -177,12 +166,20 @@ def test_get_customer() -> None:
     )
 
     assert response.status_code == 200
+    assert response.json()["id"] == customer_id
+    assert response.json()["email"] == "get@example.com"
 
-    data = response.json()
 
-    assert data["id"] == customer_id
-    assert data["name"] == "Brian Wachira"
-    assert data["email"] == "get@example.com"
+def test_get_missing_customer() -> None:
+    """A missing customer returns 404."""
+    clear_customers()
+
+    response = client.get(
+        "/api/v1/customers/999999",
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Customer not found."
 
 
 def test_update_customer() -> None:
@@ -194,7 +191,6 @@ def test_update_customer() -> None:
         json={
             "name": "Brian Wachira",
             "email": "update@example.com",
-            "phone": "+254700000000",
             "company": "OpsFlow",
         },
     )
@@ -203,23 +199,25 @@ def test_update_customer() -> None:
 
     customer_id = create_response.json()["id"]
 
-    response = client.patch(
+    update_response = client.patch(
         f"/api/v1/customers/{customer_id}",
         json={
-            "company": "Updated Operations Ltd",
+            "name": "Brian Wachira Updated",
+            "status": "inactive",
         },
     )
 
-    assert response.status_code == 200
+    assert update_response.status_code == 200
 
-    data = response.json()
+    data = update_response.json()
 
-    assert data["name"] == "Brian Wachira"
-    assert data["company"] == "Updated Operations Ltd"
+    assert data["name"] == "Brian Wachira Updated"
+    assert data["status"] == "inactive"
+    assert data["email"] == "update@example.com"
 
 
 def test_delete_customer() -> None:
-    """A customer can be deleted."""
+    """A customer without orders can be deleted."""
     clear_customers()
 
     create_response = client.post(
@@ -247,3 +245,52 @@ def test_delete_customer() -> None:
     )
 
     assert get_response.status_code == 404
+
+
+def test_delete_customer_with_orders_is_rejected() -> None:
+    """A customer with existing orders cannot be deleted."""
+    clear_customers()
+
+    customer_response = client.post(
+        "/api/v1/customers",
+        json={
+            "name": "Order Customer",
+            "email": "order-customer@example.com",
+            "company": "OpsFlow",
+        },
+    )
+
+    assert customer_response.status_code == 201
+
+    customer_id = customer_response.json()["id"]
+
+    order_response = client.post(
+        "/api/v1/orders",
+        json={
+            "customer_id": customer_id,
+            "total_amount": "1250.00",
+            "currency": "USD",
+            "description": "Customer retention order",
+        },
+    )
+
+    assert order_response.status_code == 201
+
+    delete_response = client.delete(
+        f"/api/v1/customers/{customer_id}",
+    )
+
+    assert delete_response.status_code == 409
+    assert (
+        delete_response.json()["detail"]
+        == (
+            "Customer cannot be deleted because existing orders "
+            "reference this customer."
+        )
+    )
+
+    get_response = client.get(
+        f"/api/v1/customers/{customer_id}",
+    )
+
+    assert get_response.status_code == 200

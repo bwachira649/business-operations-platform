@@ -1,4 +1,4 @@
-"""Application entry point for the Business Operations Platform."""
+﻿"""Application entry point for the Business Operations Platform."""
 
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -7,7 +7,12 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from business_operations.api.analytics import router as analytics_router
 from business_operations.api.customers import router as customers_router
+from business_operations.api.inventory import router as inventory_router
+from business_operations.api.orders import router as orders_router
+from business_operations.api.reports import router as reports_router
+from business_operations.api.tasks import router as tasks_router
 from business_operations.db.session import Base, engine
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -40,7 +45,12 @@ app.mount(
     name="static",
 )
 
+app.include_router(analytics_router)
 app.include_router(customers_router)
+app.include_router(orders_router)
+app.include_router(inventory_router)
+app.include_router(reports_router)
+app.include_router(tasks_router)
 
 
 @app.get("/", include_in_schema=False)
